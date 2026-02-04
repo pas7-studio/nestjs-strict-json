@@ -1,13 +1,23 @@
 # @pas7/nestjs-strict-json
 
-> Strict JSON parsing for NestJS (Express/Fastify) with duplicate-key detection
+> Standalone strict JSON parsing for Express/Fastify with duplicate-key detection. Works with NestJS, vanilla Express, or vanilla Fastify!
 
 [![npm version](https://badge.fury.io/js/%40pas7%2Fnestjs-strict-json.svg)](https://www.npmjs.com/package/@pas7/nestjs-strict-json)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 ## What it solves
 
-This package detects duplicate keys in JSON request bodies and returns `400 Bad Request`. It works early in the pipeline — before the ValidationPipe and before your controller — ensuring maximum security and reliability.
+This package detects duplicate keys in JSON request bodies and returns `400 Bad Request`. It works early in the pipeline — before any validation or parsing occurs.
+
+### Works with multiple frameworks
+
+**NestJS** (recommended): Full module integration with automatic adapter detection
+
+**Pure Express**: Drop-in middleware for vanilla Express apps
+
+**Pure Fastify**: Drop-in content type parser for vanilla Fastify apps
+
+The parser is framework-agnostic and can be used with any Node.js HTTP framework that supports middleware or custom body parsers.
 
 ### The Problem
 
@@ -125,6 +135,38 @@ registerStrictJsonFastify(fastifyInstance)
 
 // Express
 app.use(createStrictJsonExpressMiddleware({ maxBodySizeBytes: 1024 * 1024 }))
+```
+
+## Standalone Usage (without NestJS)
+
+You can use this package with pure Express or Fastify without NestJS!
+
+### Express
+
+```typescript
+import express from "express"
+import { createStrictJsonExpressMiddleware } from "@pas7/nestjs-strict-json"
+
+const app = express()
+
+app.use(createStrictJsonExpressMiddleware({
+  maxBodySizeBytes: 1024 * 1024
+}))
+
+app.listen(3000)
+```
+
+### Fastify
+
+```typescript
+import Fastify from "fastify"
+import { registerStrictJsonFastify } from "@pas7/nestjs-strict-json"
+
+const server = Fastify()
+
+registerStrictJsonFastify(server)
+
+server.listen({ port: 3000 })
 ```
 
 ## Examples
