@@ -1,6 +1,6 @@
 {
   "name": "@pas7/nestjs-strict-json",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "NestJS module for strict JSON parsing and validation",
   "author": "pas7-studio",
   "license": "Apache-2.0",
