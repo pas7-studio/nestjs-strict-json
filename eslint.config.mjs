@@ -15,6 +15,7 @@ export default [
       'examples/',
       'test/',
       'vitest.config.ts',
+      'tsup.config.ts',
     ],
   },
   {
