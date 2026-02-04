@@ -1,0 +1,32 @@
+import type { StrictJsonOptions } from "../core/types.js";
+import { parseStrictJson } from "../core/parser.js";
+
+export type FastifyLikeInstance = {
+  addContentTypeParser: (
+    contentType: string,
+    opts: { parseAs: "string" | "buffer" },
+    parser: (
+      req: unknown,
+      body: string | Buffer,
+      done: (err: Error | null, value?: unknown) => void,
+    ) => void,
+  ) => void;
+};
+
+export const registerStrictJsonFastify = (
+  instance: FastifyLikeInstance,
+  options?: StrictJsonOptions,
+): void => {
+  instance.addContentTypeParser(
+    "application/json",
+    { parseAs: "buffer" },
+    (_req, body, done) => {
+      try {
+        const parsed = parseStrictJson(body, options);
+        done(null, parsed);
+      } catch (e) {
+        done(e instanceof Error ? e : new Error("Strict JSON error"));
+      }
+    },
+  );
+};
