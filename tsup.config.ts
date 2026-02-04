@@ -9,4 +9,5 @@ export default defineConfig({
   target: "es2022",
   splitting: false,
   external: ["@nestjs/common", "@nestjs/core"],
+  cjsInterop: true,
 })
