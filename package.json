@@ -1,11 +1,17 @@
 {
   "name": "@pas7/nestjs-strict-json",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "NestJS module for strict JSON parsing and validation",
   "author": "pas7-studio",
   "license": "Apache-2.0",
   "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/pas7-studio/nestjs-strict-json.git"
