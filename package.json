@@ -1,6 +1,6 @@
 {
   "name": "@pas7/nestjs-strict-json",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "NestJS module for strict JSON parsing and validation",
   "author": "pas7-studio",
   "license": "Apache-2.0",
@@ -22,7 +22,7 @@
     "parser"
   ],
   "scripts": {
-    "build": "nest build",
+    "build": "tsup",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -49,6 +49,7 @@
     "eslint-config-prettier": "^9.0.0",
     "eslint-plugin-prettier": "^5.0.0",
     "prettier": "^3.0.0",
+    "tsup": "^8.0.2",
     "typescript": "^5.3.0",
     "undici": "^6.0.0",
     "vitest": "^1.0.0"
