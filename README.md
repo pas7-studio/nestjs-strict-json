@@ -5,6 +5,9 @@
 [![npm version](https://badge.fury.io/js/%40pas7%2Fnestjs-strict-json.svg)](https://www.npmjs.com/package/@pas7/nestjs-strict-json)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
+NestJS strict JSON parser with duplicate key detection for Fastify and Express. 
+Useful for API security hardening, JSON body validation safety, and preventing duplicate-key overwrite bugs.
+
 ## What it solves
 
 This package detects duplicate keys in JSON request bodies and returns `400 Bad Request`. It works early in the pipeline — before any validation or parsing occurs.
@@ -74,7 +77,14 @@ registerStrictJson(app)
 await app.listen(3000)
 ```
 
-⚠️ **Important:** To catch duplicate keys with Express, you must disable the default body parser, otherwise the duplicates are already lost.
+Important: To catch duplicate keys with Express, you must disable the default body parser, otherwise the duplicates are already lost.
+
+## Use Cases
+
+- API security: prevent silent field override attacks in request payloads.
+- Data integrity: reject ambiguous payloads before DTO validation/business logic.
+- Compliance-friendly input handling: return deterministic 4xx responses on malformed JSON.
+- Framework portability: same strict behavior for NestJS, Fastify, and Express.
 
 ## Error Format
 
@@ -88,6 +98,38 @@ All strict JSON errors include `code` and `message` (plus framework status field
     "path": "$.flag",
     "key": "flag"
   }
+}
+```
+
+### HTTP Response Examples
+
+`400 Bad Request` for duplicate keys:
+
+```json
+{
+  "statusCode": 400,
+  "message": {
+    "code": "STRICT_JSON_DUPLICATE_KEY",
+    "message": "Duplicate JSON key \"flag\" at $.flag",
+    "details": {
+      "path": "$.flag",
+      "key": "flag"
+    }
+  },
+  "error": "Bad Request"
+}
+```
+
+`413 Payload Too Large` when `maxBodySizeBytes` is exceeded:
+
+```json
+{
+  "statusCode": 413,
+  "message": {
+    "code": "STRICT_JSON_BODY_TOO_LARGE",
+    "message": "Request body exceeds max size of 1048576 bytes"
+  },
+  "error": "Payload Too Large"
 }
 ```
 
@@ -190,6 +232,12 @@ Yes! The package automatically detects which adapter you're using and applies th
 ### What about performance?
 
 The parser validates JSON with `jsonc-parser` and walks the JSON tree recursively to detect duplicate keys inside each object scope. It's designed for production use with minimal overhead.
+
+You can run a local parser benchmark:
+
+```bash
+npm run bench:parser
+```
 
 ## License
 

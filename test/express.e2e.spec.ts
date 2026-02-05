@@ -1,10 +1,17 @@
 import { describe, expect, it, beforeAll, afterAll } from "vitest";
-import { INestApplication } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  INestApplication,
+  Module,
+  Post,
+} from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
-import { Controller, Post, Body } from "@nestjs/common";
+import { ExpressAdapter } from "@nestjs/platform-express";
+import express from "express";
 import { registerStrictJson } from "../src/nest/register.js";
-import { request } from "undici";
 
+@Controller()
 class TestController {
   @Post("/test")
   test(@Body() body: unknown) {
@@ -12,19 +19,24 @@ class TestController {
   }
 }
 
-class TestModule {
-  static get providers() {
-    return [TestController];
-  }
-}
+@Module({
+  controllers: [TestController],
+})
+class TestModule {}
 
 describe("Express E2E", () => {
   let app: INestApplication;
   let url: string;
 
   beforeAll(async () => {
-    const module = new TestModule();
-    app = await NestFactory.create(module, { bodyParser: false });
+    app = await NestFactory.create(
+      TestModule,
+      new ExpressAdapter(express()),
+      {
+        bodyParser: false,
+        logger: false,
+      },
+    );
 
     registerStrictJson(app as never);
 
@@ -42,31 +54,36 @@ describe("Express E2E", () => {
   });
 
   it("accepts valid JSON", async () => {
-    const { body } = await request(url + "/test", {
+    const res = await fetch(url + "/test", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ valid: true }),
     });
-    expect(body).toEqual({ received: { valid: true } });
+    expect(res.status).toBe(201);
+    expect(await res.json()).toEqual({ received: { valid: true } });
   });
 
   it("rejects duplicate keys with 400", async () => {
-    const res = await request(url + "/test", {
+    const res = await fetch(url + "/test", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ flag: true, flag: false }),
+      body: '{"flag":true,"flag":false}',
     });
-    expect(res.statusCode).toBe(400);
-    expect(res.body.code).toBe("STRICT_JSON_DUPLICATE_KEY");
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({
+      code: "STRICT_JSON_DUPLICATE_KEY",
+    });
   });
 
   it("rejects invalid JSON with 400", async () => {
-    const res = await request(url + "/test", {
+    const res = await fetch(url + "/test", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: "{invalid}",
     });
-    expect(res.statusCode).toBe(400);
-    expect(res.body.code).toBe("STRICT_JSON_INVALID_JSON");
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({
+      code: "STRICT_JSON_INVALID_JSON",
+    });
   });
 });

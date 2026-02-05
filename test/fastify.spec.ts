@@ -1,4 +1,4 @@
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestException, PayloadTooLargeException } from "@nestjs/common";
 import { describe, expect, it } from "vitest";
 import {
   type FastifyLikeInstance,
@@ -35,6 +35,38 @@ describe("registerStrictJsonFastify", () => {
     expect(err.getStatus()).toBe(400);
     expect(err.getResponse()).toMatchObject({
       code: "STRICT_JSON_DUPLICATE_KEY",
+    });
+  });
+
+  it("maps strict body-too-large errors to 413 with code in payload", () => {
+    let parser:
+      | ((
+          req: unknown,
+          body: string | Buffer,
+          done: (err: Error | null, value?: unknown) => void,
+        ) => void)
+      | undefined;
+
+    const instance: FastifyLikeInstance = {
+      addContentTypeParser: (_contentType, _opts, p) => {
+        parser = p;
+      },
+    };
+
+    registerStrictJsonFastify(instance, { maxBodySizeBytes: 8 });
+
+    const doneCalls: Array<{ err: Error | null; value?: unknown }> = [];
+    parser?.({}, Buffer.from('{"payload":"this is too long"}'), (err, value) => {
+      doneCalls.push({ err, value });
+    });
+
+    expect(doneCalls).toHaveLength(1);
+    expect(doneCalls[0]?.err).toBeInstanceOf(PayloadTooLargeException);
+
+    const err = doneCalls[0]?.err as PayloadTooLargeException;
+    expect(err.getStatus()).toBe(413);
+    expect(err.getResponse()).toMatchObject({
+      code: "STRICT_JSON_BODY_TOO_LARGE",
     });
   });
 });

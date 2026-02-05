@@ -37,5 +37,8 @@ jobs:
       - name: Test
         run: pnpm test
 
+      - name: E2E Test
+        run: pnpm test:e2e
+
       - name: Build
         run: pnpm build

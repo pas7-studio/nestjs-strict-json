@@ -13,6 +13,7 @@ export default [
       'examples/',
       'test/',
       'vitest.config.ts',
+      'vitest.e2e.config.ts',
       'tsup.config.ts',
     ],
   },
