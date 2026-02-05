@@ -1,5 +1,5 @@
 import { performance } from "node:perf_hooks";
-import { parseStrictJson } from "../dist/index.js";
+import { parseStrictJson } from "../dist/index.mjs";
 
 const scenarios = [
   {
