@@ -8,6 +8,7 @@
 ## What it solves
 
 This package detects duplicate keys in JSON request bodies and returns `400 Bad Request`. It works early in the pipeline — before any validation or parsing occurs.
+Duplicate detection is scoped per JSON object node, so equal keys in different array elements are allowed.
 
 ### Works with multiple frameworks
 
@@ -77,16 +78,16 @@ await app.listen(3000)
 
 ## Error Format
 
-All errors follow a consistent format:
+All strict JSON errors include `code` and `message` (plus framework status fields such as `statusCode` when applicable). Duplicate-key errors also include location data:
 
 ```json
 {
-  "statusCode": 400,
   "code": "STRICT_JSON_DUPLICATE_KEY",
   "message": "Duplicate JSON key \"flag\" at $.flag",
-  "path": "$.flag",
-  "key": "flag",
-  "position": 0
+  "details": {
+    "path": "$.flag",
+    "key": "flag"
+  }
 }
 ```
 
@@ -188,7 +189,7 @@ Yes! The package automatically detects which adapter you're using and applies th
 
 ### What about performance?
 
-The parser uses efficient streaming (via `jsonparse`) and processes data incrementally. It's designed for production use with minimal overhead.
+The parser validates JSON with `jsonc-parser` and walks the JSON tree recursively to detect duplicate keys inside each object scope. It's designed for production use with minimal overhead.
 
 ## License
 

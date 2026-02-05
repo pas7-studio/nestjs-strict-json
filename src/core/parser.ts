@@ -3,34 +3,54 @@ import {
   DuplicateKeyError,
   InvalidJsonError,
 } from "./errors.js";
+import { parseTree, type Node, type ParseError } from "jsonc-parser";
 import type { StrictJsonOptions } from "./types.js";
 
-const findDuplicateKeysInJson = (
-  jsonStr: string,
-): { key: string; path: string } | null => {
-  const regex = /"(?:[^"\\]|\\.)*"(?=\s*:)/g;
-  const stack: Array<{ key: string; start: number; children: string[] }> = [];
-  const seenAtLevel = new Map<number, Set<string>>();
-  let depth = 0;
+type Duplicate = { key: string; path: string } | null;
 
-  let match;
-  while ((match = regex.exec(jsonStr)) !== null) {
-    const key = match[0].slice(1, -1);
-    const levelKeys = seenAtLevel.get(depth) || new Set<string>();
+const findDuplicateInNode = (node: Node, path = "$"): Duplicate => {
+  if (node.type === "object") {
+    const seen = new Set<string>();
 
-    if (levelKeys.has(key)) {
-      const path = stack
-        .slice(0, depth)
-        .map((ctx) => ctx.key)
-        .join(".");
-      return { key, path: path ? `$.${path}.${key}` : `$.${key}` };
+    for (const prop of node.children ?? []) {
+      if (prop.type !== "property" || !prop.children || prop.children.length < 2)
+        continue;
+
+      const [keyNode, valueNode] = prop.children;
+      const key = String(keyNode.value ?? "");
+
+      if (seen.has(key)) {
+        return { key, path: `${path}.${key}` };
+      }
+      seen.add(key);
+
+      const nested = findDuplicateInNode(valueNode, `${path}.${key}`);
+      if (nested) return nested;
     }
+  }
 
-    levelKeys.add(key);
-    seenAtLevel.set(depth, levelKeys);
+  if (node.type === "array") {
+    for (let i = 0; i < (node.children ?? []).length; i += 1) {
+      const child = node.children?.[i];
+      if (!child) continue;
+      const nested = findDuplicateInNode(child, `${path}[${i}]`);
+      if (nested) return nested;
+    }
   }
 
   return null;
+};
+
+const findDuplicateKeysInJson = (jsonStr: string): Duplicate => {
+  const errors: ParseError[] = [];
+  const root = parseTree(jsonStr, errors, {
+    allowTrailingComma: false,
+    disallowComments: true,
+    allowEmptyContent: false,
+  });
+
+  if (!root || errors.length > 0) return null;
+  return findDuplicateInNode(root, "$");
 };
 
 export const parseStrictJson = (
