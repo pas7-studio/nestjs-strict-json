@@ -1,4 +1,4 @@
-export { parseStrictJson, parseStrictJsonAsync } from "./core/parser.js";
+export { parseStrictJson, parseStrictJsonAsync, clearParseCache, getParseCacheSize } from "./core/parser.js";
 export {
   StreamingJsonParser,
   parseJsonStream,

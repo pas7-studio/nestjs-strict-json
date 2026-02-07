@@ -1,38 +1,70 @@
 # Detailed Benchmark Results
 
-Generated: 2026-02-07T03:52:04.713Z
+Generated: 2026-02-07T14:49:29.884Z
 
-## Shallow Duplicates
+## Small Payloads
 
 | Implementation | Time (ms) | Memory (MB) | Ops/sec | Status |
 |----------------|-----------|-------------|---------|--------|
-| No Duplicates | 0.003 | -0.00 | 387252 | ✅ |
-| With Duplicates | 0.008 | 0.00 | 126622 | ✅ |
+| 100x5 Fields | 0.112 | -0.03 | 8894 | ✅ |
+| 500x2 Fields | 0.194 | -0.01 | 5156 | ✅ |
 
-🏆 **Fastest**: No Duplicates (0.003ms)
+🏆 **Fastest**: 100x5 Fields (0.112ms)
 
 ---
 
-## Deep Duplicates
+## Medium Payloads
 
 | Implementation | Time (ms) | Memory (MB) | Ops/sec | Status |
 |----------------|-----------|-------------|---------|--------|
-| Level 2 | 0.012 | 0.00 | 86606 | ✅ |
-| Level 5 | 0.015 | 0.00 | 65791 | ✅ |
-| Level 10 | 0.028 | -0.01 | 35271 | ✅ |
+| 1000x5 Fields | 0.683 | -0.02 | 1465 | ✅ |
+| 2000x3 Fields | 1.167 | 0.02 | 857 | ✅ |
 
-🏆 **Fastest**: Level 2 (0.012ms)
+🏆 **Fastest**: 1000x5 Fields (0.683ms)
 
 ---
 
-## Large Duplicates
+## Large Payloads
 
 | Implementation | Time (ms) | Memory (MB) | Ops/sec | Status |
 |----------------|-----------|-------------|---------|--------|
-| 100 Items | 0.105 | 0.00 | 9525 | ✅ |
-| 500 Items | 0.499 | 0.00 | 2006 | ✅ |
+| 5000x10 Fields | 6.880 | -0.34 | 145 | ✅ |
+| 10000x5 Fields | 8.493 | 0.73 | 118 | ✅ |
 
-🏆 **Fastest**: 100 Items (0.105ms)
+🏆 **Fastest**: 5000x10 Fields (6.880ms)
+
+---
+
+## Extra Large
+
+| Implementation | Time (ms) | Memory (MB) | Ops/sec | Status |
+|----------------|-----------|-------------|---------|--------|
+| 20000x5 Fields | 13.937 | 0.44 | 72 | ✅ |
+| 50000x3 Fields | 21.448 | 3.22 | 47 | ✅ |
+
+🏆 **Fastest**: 20000x5 Fields (13.937ms)
+
+---
+
+## String Data
+
+| Implementation | Time (ms) | Memory (MB) | Ops/sec | Status |
+|----------------|-----------|-------------|---------|--------|
+| 100x1KB | 0.343 | -0.00 | 2913 | ✅ |
+| 500x500B | 0.869 | -0.48 | 1151 | ✅ |
+
+🏆 **Fastest**: 100x1KB (0.343ms)
+
+---
+
+## Numeric Data
+
+| Implementation | Time (ms) | Memory (MB) | Ops/sec | Status |
+|----------------|-----------|-------------|---------|--------|
+| 10000x10 | 25.700 | 5.32 | 39 | ✅ |
+| 50000x5 | 63.024 | 20.13 | 16 | ✅ |
+
+🏆 **Fastest**: 10000x10 (25.700ms)
 
 ---
 
