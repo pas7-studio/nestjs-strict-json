@@ -4,7 +4,7 @@ Strict JSON security for NestJS, Express, and Fastify.
 
 Reject malformed, ambiguous, and dangerous JSON payloads before they reach your DTO validation or business logic.
 
-[![npm version](https://badge.fury.io/js/%40pas7%2Fnestjs-strict-json.svg)](https://www.npmjs.com/package/@pas7/nestjs-strict-json)
+[![npm version](https://img.shields.io/npm/v/%40pas7%2Fnestjs-strict-json?style=flat-square)](https://www.npmjs.com/package/@pas7/nestjs-strict-json)
 [![Release](https://img.shields.io/github/v/release/pas7-studio/nestjs-strict-json?sort=semver&style=flat-square)](https://github.com/pas7-studio/nestjs-strict-json/releases)
 [![Build Status](https://github.com/pas7-studio/nestjs-strict-json/actions/workflows/ci.yml/badge.svg)](https://github.com/pas7-studio/nestjs-strict-json/actions/workflows/ci.yml)
 [![License](https://img.shields.io/github/license/pas7-studio/nestjs-strict-json?style=flat-square)](https://github.com/pas7-studio/nestjs-strict-json/blob/main/LICENSE)
@@ -406,4 +406,3 @@ Apache-2.0
 [Ko-fi](https://ko-fi.com/pas7studio)
 
 PayPal: https://www.paypal.com/ncp/payment/KDSSNKK8REDM8
-

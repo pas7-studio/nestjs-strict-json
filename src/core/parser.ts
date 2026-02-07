@@ -6,7 +6,7 @@ import {
   PrototypePollutionError,
 } from "./errors.js";
 import { parseTree, type Node, type ParseError } from "jsonc-parser";
-import type { StrictJsonOptions } from "./types.js";
+import type { StrictJsonErrorHandler, StrictJsonOptions } from "./types.js";
 import { isKeyAllowed } from "./utils.js";
 import { StreamingJsonParser } from "./streaming-parser.js";
 
@@ -56,6 +56,19 @@ class LRUCache<K, V> {
     this.cache.clear();
   }
 
+  configure(maxSize: number, ttl: number): void {
+    this.maxSize = maxSize;
+    this.ttl = ttl;
+  }
+
+  pruneExpired(now: number = Date.now()): void {
+    for (const [key, entry] of this.cache) {
+      if (now - entry.timestamp > this.ttl) {
+        this.cache.delete(key);
+      }
+    }
+  }
+
   get size(): number {
     return this.cache.size;
   }
@@ -66,14 +79,9 @@ const parseCache = new LRUCache<string, unknown>();
 
 // Cache cleanup interval (every 5 minutes)
 setInterval(() => {
-  // LRU cache automatically expires on access, but we can periodically clean
-  // old entries to prevent memory bloat
-  const now = Date.now();
-  for (const [key, entry] of parseCache['cache']) {
-    if (now - entry.timestamp > DEFAULT_CACHE_TTL) {
-      parseCache['cache'].delete(key);
-    }
-  }
+  // LRU cache automatically expires on access, but periodic cleanup
+  // prevents stale entries from hanging in memory indefinitely.
+  parseCache.pruneExpired();
 }, 5 * 60 * 1000);
 
 // Export cache functions for manual control
@@ -271,14 +279,15 @@ function parseWithFastPath(jsonStr: string, options?: StrictJsonOptions): unknow
     if (options?.enablePrototypePollutionProtection !== false) {
       const dangerousKeys = new Set(['__proto__', 'constructor', 'prototype']);
       
-      function checkPrototypePollution(obj: any, path: string = '$'): void {
+      function checkPrototypePollution(obj: unknown, path: string = '$'): void {
         if (obj && typeof obj === 'object') {
-          for (const key of Object.keys(obj)) {
+          const record = obj as Record<string, unknown>;
+          for (const key of Object.keys(record)) {
             if (dangerousKeys.has(key)) {
               throw new PrototypePollutionError(key, path);
             }
-            if (typeof obj[key] === 'object' && obj[key] !== null) {
-              checkPrototypePollution(obj[key], `${path}.${key}`);
+            if (typeof record[key] === 'object' && record[key] !== null) {
+              checkPrototypePollution(record[key], `${path}.${key}`);
             }
           }
         }
@@ -343,8 +352,8 @@ async function parseLargePayload(buffer: Buffer, options?: StrictJsonOptions): P
 
 // Custom error handler wrapper - sync version
 const invokeErrorHandlerSync = (
-  handler: ((error: any) => void | Promise<void>) | undefined,
-  error: any
+  handler: StrictJsonErrorHandler | undefined,
+  error: unknown
 ): void => {
   if (handler) {
     try {
@@ -358,8 +367,8 @@ const invokeErrorHandlerSync = (
 
 // Custom error handler wrapper - async version
 const invokeErrorHandlerAsync = async (
-  handler: ((error: any) => void | Promise<void>) | undefined,
-  error: any
+  handler: StrictJsonErrorHandler | undefined,
+  error: unknown
 ): Promise<void> => {
   if (handler) {
     try {
@@ -399,8 +408,7 @@ export const parseStrictJson = (
     const cacheTTL = options?.cacheTTL ?? DEFAULT_CACHE_TTL;
     
     // Ensure cache is configured with correct size and TTL
-    (parseCache as any).maxSize = cacheSize;
-    (parseCache as any).ttl = cacheTTL;
+    parseCache.configure(cacheSize, cacheTTL);
     
     const cached = parseCache.get(cacheKey);
     if (cached !== null) {
@@ -540,8 +548,7 @@ export const parseStrictJsonAsync = async (
     const cacheTTL = options?.cacheTTL ?? DEFAULT_CACHE_TTL;
     
     // Ensure cache is configured with correct size and TTL
-    (parseCache as any).maxSize = cacheSize;
-    (parseCache as any).ttl = cacheTTL;
+    parseCache.configure(cacheSize, cacheTTL);
     
     const cached = parseCache.get(cacheKey);
     if (cached !== null) {

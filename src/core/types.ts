@@ -1,12 +1,16 @@
+export type StrictJsonErrorHandler = (
+  error: unknown
+) => void | Promise<void>;
+
 export type StrictJsonOptions = {
   maxBodySizeBytes?: number;
   enablePrototypePollutionProtection?: boolean;
   dangerousKeys?: string[];
-  onDuplicateKey?: (error: any) => void | Promise<void>;
-  onInvalidJson?: (error: any) => void | Promise<void>;
-  onBodyTooLarge?: (error: any) => void | Promise<void>;
-  onPrototypePollution?: (error: any) => void | Promise<void>;
-  onError?: (error: any) => void | Promise<void>;
+  onDuplicateKey?: StrictJsonErrorHandler;
+  onInvalidJson?: StrictJsonErrorHandler;
+  onBodyTooLarge?: StrictJsonErrorHandler;
+  onPrototypePollution?: StrictJsonErrorHandler;
+  onError?: StrictJsonErrorHandler;
   whitelist?: string[];
   blacklist?: string[];
   maxDepth?: number;
