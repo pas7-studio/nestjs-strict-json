@@ -85,6 +85,34 @@ export function getParseCacheSize(): number {
   return parseCache.size;
 }
 
+function buildCacheKey(jsonStr: string, options?: StrictJsonOptions): string {
+  if (!options) {
+    return jsonStr;
+  }
+
+  const normalizedOptions = {
+    maxBodySizeBytes: options.maxBodySizeBytes,
+    enablePrototypePollutionProtection: options.enablePrototypePollutionProtection,
+    dangerousKeys: options.dangerousKeys,
+    whitelist: options.whitelist,
+    blacklist: options.blacklist,
+    maxDepth: options.maxDepth,
+    ignoreCase: options.ignoreCase,
+    enableStreaming: options.enableStreaming,
+    streamingThreshold: options.streamingThreshold,
+    chunkSize: options.chunkSize,
+    lazyMode: options.lazyMode,
+    lazyModeThreshold: options.lazyModeThreshold,
+    lazyModeDepthLimit: options.lazyModeDepthLimit,
+    lazyModeSkipPrototype: options.lazyModeSkipPrototype,
+    lazyModeSkipWhitelist: options.lazyModeSkipWhitelist,
+    lazyModeSkipBlacklist: options.lazyModeSkipBlacklist,
+    enableFastPath: options.enableFastPath,
+  };
+
+  return `${jsonStr}::${JSON.stringify(normalizedOptions)}`;
+}
+
 type Duplicate = { key: string; path: string } | null;
 type DangerousKey = { key: string; path: string } | null;
 
@@ -106,6 +134,7 @@ const findDuplicateInNode = (
   const lazyMode = options?.lazyMode === true;
   const lazyModeDepthLimit = options?.lazyModeDepthLimit ?? 10;
   const lazyModeSkipPrototype = options?.lazyModeSkipPrototype ?? true;
+  const lazyModeSkipWhitelist = options?.lazyModeSkipWhitelist ?? true;
   const lazyModeSkipBlacklist = options?.lazyModeSkipBlacklist ?? false;
 
   // Regular configuration
@@ -123,8 +152,11 @@ const findDuplicateInNode = (
   
   // Pre-compute whitelist/blacklist check to avoid repeated property access
   const hasWhitelistOrBlacklist = options?.whitelist !== undefined || options?.blacklist !== undefined;
+  const shouldCheckWhitelist = hasWhitelistOrBlacklist &&
+    !(lazyMode && lazyModeSkipWhitelist);
   const shouldCheckBlacklist = hasWhitelistOrBlacklist && 
     !(lazyMode && lazyModeSkipBlacklist);
+  const shouldValidateKeyPolicy = shouldCheckWhitelist || shouldCheckBlacklist;
 
   // Determine effective depth limit (lazy mode or normal mode)
   const effectiveDepthLimit = lazyMode ? Math.min(maxDepth, lazyModeDepthLimit) : maxDepth;
@@ -153,8 +185,8 @@ const findDuplicateInNode = (
         const key = String(keyNode.value ?? "");
         const keyPath = `${currentPath}.${key}`;
 
-        // Check blacklist (always check, even in lazy mode unless explicitly skipped)
-        if (shouldCheckBlacklist) {
+        // Enforce whitelist/blacklist policy when enabled.
+        if (shouldValidateKeyPolicy) {
           if (!isKeyAllowed(keyPath, options?.whitelist, options?.blacklist)) {
             throw new InvalidJsonError(`Key '${key}' at ${keyPath} is not allowed`);
           }
@@ -359,6 +391,7 @@ export const parseStrictJson = (
   }
 
   const jsonStr = buf.toString("utf-8");
+  const cacheKey = buildCacheKey(jsonStr, options);
   
   // Try cache first (if enabled)
   if (options?.enableCache !== false) {
@@ -369,7 +402,7 @@ export const parseStrictJson = (
     (parseCache as any).maxSize = cacheSize;
     (parseCache as any).ttl = cacheTTL;
     
-    const cached = parseCache.get(jsonStr);
+    const cached = parseCache.get(cacheKey);
     if (cached !== null) {
       return cached;
     }
@@ -388,7 +421,7 @@ export const parseStrictJson = (
         const result = parseWithFastPath(jsonStr, options);
         // Cache the result
         if (options?.enableCache !== false) {
-          parseCache.set(jsonStr, result);
+          parseCache.set(cacheKey, result);
         }
         return result;
       } catch (fastPathError) {
@@ -405,7 +438,7 @@ export const parseStrictJson = (
       
       // Cache the result
       if (options?.enableCache !== false) {
-        parseCache.set(jsonStr, parsed);
+        parseCache.set(cacheKey, parsed);
       }
       
       return parsed;
@@ -415,7 +448,7 @@ export const parseStrictJson = (
     const shouldUseLazyMode = lazyMode || (buf.length >= lazyModeThreshold);
 
     // Prepare options with lazy mode settings if applicable
-    const effectiveOptions: StrictJsonOptions = shouldUseLazyMode ? {
+    const effectiveOptions: StrictJsonOptions | undefined = shouldUseLazyMode ? {
       ...options,
       lazyMode: true,
       lazyModeDepthLimit: options?.lazyModeDepthLimit ?? 10,
@@ -437,7 +470,7 @@ export const parseStrictJson = (
     
     // Cache the result
     if (options?.enableCache !== false) {
-      parseCache.set(jsonStr, parsed);
+      parseCache.set(cacheKey, parsed);
     }
 
     return parsed;
@@ -499,6 +532,7 @@ export const parseStrictJsonAsync = async (
   }
 
   const jsonStr = buf.toString("utf-8");
+  const cacheKey = buildCacheKey(jsonStr, options);
 
   // Try cache first (if enabled)
   if (options?.enableCache !== false) {
@@ -509,7 +543,7 @@ export const parseStrictJsonAsync = async (
     (parseCache as any).maxSize = cacheSize;
     (parseCache as any).ttl = cacheTTL;
     
-    const cached = parseCache.get(jsonStr);
+    const cached = parseCache.get(cacheKey);
     if (cached !== null) {
       return cached;
     }
@@ -528,7 +562,7 @@ export const parseStrictJsonAsync = async (
         const result = parseWithFastPath(jsonStr, options);
         // Cache the result
         if (options?.enableCache !== false) {
-          parseCache.set(jsonStr, result);
+          parseCache.set(cacheKey, result);
         }
         return result;
       } catch (fastPathError) {
@@ -542,7 +576,7 @@ export const parseStrictJsonAsync = async (
       const result = await parseLargePayload(buf, options);
       // Cache the result
       if (options?.enableCache !== false) {
-        parseCache.set(jsonStr, result);
+        parseCache.set(cacheKey, result);
       }
       return result;
     }
@@ -551,7 +585,7 @@ export const parseStrictJsonAsync = async (
     const shouldUseLazyMode = lazyMode || (buf.length >= lazyModeThreshold);
 
     // Prepare options with lazy mode settings if applicable
-    const effectiveOptions: StrictJsonOptions = shouldUseLazyMode ? {
+    const effectiveOptions: StrictJsonOptions | undefined = shouldUseLazyMode ? {
       ...options,
       lazyMode: true,
       lazyModeDepthLimit: options?.lazyModeDepthLimit ?? 10,
@@ -573,7 +607,7 @@ export const parseStrictJsonAsync = async (
     
     // Cache the result
     if (options?.enableCache !== false) {
-      parseCache.set(jsonStr, parsed);
+      parseCache.set(cacheKey, parsed);
     }
 
     return parsed;
