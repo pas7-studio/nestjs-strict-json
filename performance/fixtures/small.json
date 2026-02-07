@@ -1,0 +1,21 @@
+{
+  "id": 1,
+  "name": "Test User",
+  "email": "test@example.com",
+  "age": 30,
+  "active": true,
+  "createdAt": "2024-01-01T00:00:00Z",
+  "settings": {
+    "theme": "dark",
+    "notifications": true,
+    "language": "uk"
+  },
+  "tags": [
+    "user",
+    "test"
+  ],
+  "metadata": {
+    "source": "benchmark",
+    "version": "1.0.0"
+  }
+}

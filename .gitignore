@@ -42,3 +42,6 @@ Thumbs.db
 .cache/
 .temp/
 tmp/
+
+# Performance benchmark reports
+performance/reports/results.json

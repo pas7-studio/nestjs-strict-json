@@ -38,6 +38,11 @@
   "scripts": {
     "build": "tsup",
     "bench:parser": "npm run build && node scripts/benchmark-parser.mjs",
+    "benchmark": "node performance/run-all-benchmarks.mjs",
+    "benchmark:parser": "npx vitest run performance/benchmarks/parser/",
+    "benchmark:adapters": "npx vitest run performance/benchmarks/adapters/",
+    "benchmark:comparisons": "npx vitest run performance/benchmarks/comparisons/",
+    "benchmark:report": "node performance/utils/generate-report.mjs",
     "lint": "eslint .",
     "test": "vitest run",
     "test:e2e": "vitest run --config vitest.e2e.config.ts",

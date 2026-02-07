@@ -1,0 +1,93 @@
+{
+  "level": 30,
+  "nested": {
+    "level": 29,
+    "nested": {
+      "level": 28,
+      "nested": {
+        "level": 27,
+        "nested": {
+          "level": 26,
+          "nested": {
+            "level": 25,
+            "nested": {
+              "level": 24,
+              "nested": {
+                "level": 23,
+                "nested": {
+                  "level": 22,
+                  "nested": {
+                    "level": 21,
+                    "nested": {
+                      "level": 20,
+                      "nested": {
+                        "level": 19,
+                        "nested": {
+                          "level": 18,
+                          "nested": {
+                            "level": 17,
+                            "nested": {
+                              "level": 16,
+                              "nested": {
+                                "level": 15,
+                                "nested": {
+                                  "level": 14,
+                                  "nested": {
+                                    "level": 13,
+                                    "nested": {
+                                      "level": 12,
+                                      "nested": {
+                                        "level": 11,
+                                        "nested": {
+                                          "level": 10,
+                                          "nested": {
+                                            "level": 9,
+                                            "nested": {
+                                              "level": 8,
+                                              "nested": {
+                                                "level": 7,
+                                                "nested": {
+                                                  "level": 6,
+                                                  "nested": {
+                                                    "level": 5,
+                                                    "nested": {
+                                                      "level": 4,
+                                                      "nested": {
+                                                        "level": 3,
+                                                        "nested": {
+                                                          "level": 2,
+                                                          "nested": {
+                                                            "level": 1,
+                                                            "nested": {
+                                                              "final": "value"
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

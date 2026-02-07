@@ -1,0 +1,13 @@
+{
+  "id": 1,
+  "name": "Test",
+  "name": "Duplicate Name",
+  "email": "test@example.com",
+  "email": "duplicate@example.com",
+  "nested": {
+    "key1": "value1",
+    "key1": "value1-duplicate",
+    "key2": "value2"
+  },
+  "active": true
+}
