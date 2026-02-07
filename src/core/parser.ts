@@ -5,16 +5,10 @@ import {
   InvalidJsonError,
   PrototypePollutionError,
 } from "./errors.js";
-import { parseTree, getNodeValue, type Node, type ParseError } from "jsonc-parser";
+import { parseTree, type Node, type ParseError } from "jsonc-parser";
 import type { StrictJsonOptions } from "./types.js";
 import { isKeyAllowed } from "./utils.js";
-import { parseJsonStream, StreamingJsonParser, shouldUseStreaming } from "./streaming-parser.js";
-
-// LRU Cache implementation
-interface CacheEntry {
-  result: unknown;
-  timestamp: number;
-}
+import { StreamingJsonParser } from "./streaming-parser.js";
 
 const DEFAULT_CACHE_TTL = 60000; // 60 seconds
 const DEFAULT_CACHE_SIZE = 1000; // Max 1000 cached results
@@ -100,7 +94,6 @@ interface StackFrame {
   path: string;
   depth: number;
   seenKeys: Set<string>;
-  arrayIndex?: number;
 }
 
 const findDuplicateInNode = (
@@ -111,10 +104,8 @@ const findDuplicateInNode = (
 ): Duplicate | DangerousKey => {
   // Lazy mode configuration
   const lazyMode = options?.lazyMode === true;
-  const lazyModeThreshold = options?.lazyModeThreshold ?? 100 * 1024; // 100KB
   const lazyModeDepthLimit = options?.lazyModeDepthLimit ?? 10;
   const lazyModeSkipPrototype = options?.lazyModeSkipPrototype ?? true;
-  const lazyModeSkipWhitelist = options?.lazyModeSkipWhitelist ?? true;
   const lazyModeSkipBlacklist = options?.lazyModeSkipBlacklist ?? false;
 
   // Regular configuration
@@ -132,8 +123,6 @@ const findDuplicateInNode = (
   
   // Pre-compute whitelist/blacklist check to avoid repeated property access
   const hasWhitelistOrBlacklist = options?.whitelist !== undefined || options?.blacklist !== undefined;
-  const shouldCheckWhitelist = hasWhitelistOrBlacklist && 
-    !(lazyMode && lazyModeSkipWhitelist);
   const shouldCheckBlacklist = hasWhitelistOrBlacklist && 
     !(lazyMode && lazyModeSkipBlacklist);
 
@@ -146,7 +135,7 @@ const findDuplicateInNode = (
   ];
 
   while (stack.length > 0) {
-    const { node: currentNode, path: currentPath, depth: currentDepth, seenKeys: currentSeenKeys, arrayIndex } = stack.pop()!;
+    const { node: currentNode, path: currentPath, depth: currentDepth, seenKeys: currentSeenKeys } = stack.pop()!;
     
     // Check depth limit
     if (currentDepth > effectiveDepthLimit) {
