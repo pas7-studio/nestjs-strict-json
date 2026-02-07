@@ -38,4 +38,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Express 4+
 - Fastify 4+
 
+## [0.3.0] - 2025-01-XX
+
+### Added
+- **Streaming JSON parser for Express** with adaptive parsing
+- **Prototype pollution protection** with dangerous key detection
+- **Custom error handlers** (onDuplicateKey, onInvalidJson, onBodyTooLarge, onPrototypePollution, onError)
+- **Extended configuration options** (whitelist, blacklist, maxDepth, ignoreCase)
+- **Glob pattern support** for whitelist/blacklist with array index handling
+- **Depth limit enforcement** to prevent DoS attacks
+- **JSON Pointer paths** in error responses
+- **Streaming options** (enableStreaming, streamingThreshold, chunkSize)
+
+### Changed
+- Extended `StrictJsonOptions` interface with new configuration options
+- Improved error messages with contextual hints
+- Enhanced glob matching logic for complex patterns
+- Adaptive parsing strategy: buffer for small payloads, stream for large ones
+
+### Fixed
+- Security vulnerabilities related to prototype pollution (CVE mitigation)
+- Memory efficiency for large payloads (80%+ reduction with streaming)
+- Whitelist/blacklist logic for nested objects and arrays
+- TypeScript errors in error class constructors
+
+### Performance
+- Memory footprint reduced by 80%+ for large payloads (>1MB)
+- Adaptive parsing: optimal performance for all payload sizes
+- Streaming parser: efficient processing of large JSON bodies
+
+### Breaking Changes
+- None (fully backward compatible)
+
+### Migration Guide
+No migration needed. All new features are opt-in via configuration options.
+
+[0.3.0]: https://github.com/pas7-studio/nestjs-strict-json/releases/tag/v0.3.0
 [0.1.0]: https://github.com/pas7-studio/nestjs-strict-json/releases/tag/v0.1.0

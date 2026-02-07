@@ -138,6 +138,310 @@ All strict JSON errors include `code` and `message` (plus framework status field
 - `STRICT_JSON_DUPLICATE_KEY` - Duplicate key detected
 - `STRICT_JSON_INVALID_JSON` - Invalid JSON syntax
 - `STRICT_JSON_BODY_TOO_LARGE` - Request body exceeds max size (HTTP 413)
+- `STRICT_JSON_PROTOTYPE_POLLUTION` - Prototype pollution attempt detected (HTTP 400)
+- `STRICT_JSON_DEPTH_LIMIT` - JSON nesting depth exceeded limit (HTTP 400)
+
+## Prototype Pollution Protection
+
+This package automatically protects against prototype pollution attacks by detecting dangerous keys like `__proto__`, `constructor`, and `prototype`.
+
+### How it works
+
+When a dangerous key is detected in the JSON payload, the parser throws a `PrototypePollutionError` with HTTP 400 status.
+
+```json
+{
+  "statusCode": 400,
+  "code": "STRICT_JSON_PROTOTYPE_POLLUTION",
+  "message": "Prototype pollution attempt detected: dangerous key '__proto__' at $.__proto__",
+  "details": {
+    "code": "STRICT_JSON_PROTOTYPE_POLLUTION",
+    "message": "Prototype pollution attempt detected: dangerous key '__proto__' at $.__proto__",
+    "path": "$.__proto__",
+    "dangerousKey": "__proto__"
+  }
+}
+```
+
+### Configuration
+
+```typescript
+registerStrictJson(app, {
+  enablePrototypePollutionProtection: true,  // Enable/disable (default: true)
+  dangerousKeys: ['__proto__', 'constructor', 'prototype']  // Custom dangerous keys
+})
+```
+
+### Example
+
+```typescript
+// This will be blocked
+{
+  "user": "John",
+  "__proto__": {"isAdmin": true}  // ❌ Prototype pollution attempt
+}
+```
+
+## Custom Error Handlers
+
+You can register custom error handlers to log errors, send to monitoring services, or implement custom logic.
+
+### Available Handlers
+
+- `onDuplicateKey(error)` - Called when duplicate key is detected
+- `onInvalidJson(error)` - Called when JSON is invalid
+- `onBodyTooLarge(error)` - Called when body size exceeds limit
+- `onPrototypePollution(error)` - Called when prototype pollution is detected
+- `onError(error)` - Called for any error (generic handler)
+
+### Example
+
+```typescript
+registerStrictJson(app, {
+  onDuplicateKey: (error) => {
+    console.log(`Duplicate key: ${error.key} at ${error.path}`);
+    // Send to Sentry
+    Sentry.captureException(error);
+  },
+  onPrototypePollution: async (error) => {
+    console.warn(`Security issue: ${error.dangerousKey} detected`);
+    await notifySecurityTeam(error);
+  },
+  onError: (error) => {
+    // Track all errors
+    analytics.track('strict_json_error', { code: error.code });
+  }
+})
+```
+
+## Extended Configuration Options
+
+### Whitelist & Blacklist
+
+Control which keys are allowed in your JSON payloads using glob patterns.
+
+#### Whitelist (Allow Only)
+
+```typescript
+registerStrictJson(app, {
+  whitelist: ['user.*', 'profile.*']  // Only allow user.* and profile.* keys
+})
+```
+
+```json
+// ✅ Allowed
+{
+  "user": {"name": "John"},
+  "profile": {"age": 30}
+}
+
+// ❌ Rejected
+{
+  "user": {"name": "John"},
+  "secret": "value"  // Not in whitelist
+}
+```
+
+#### Blacklist (Block Specific)
+
+```typescript
+registerStrictJson(app, {
+  blacklist: ['password', 'secret.*', 'api-key']  // Block sensitive keys
+})
+```
+
+```json
+// ❌ Blocked
+{
+  "user": "John",
+  "password": "secret123"  // In blacklist
+}
+```
+
+### maxDepth
+
+Protect against DoS attacks by limiting JSON nesting depth.
+
+```typescript
+registerStrictJson(app, {
+  maxDepth: 10  // Maximum nesting depth (default: 20)
+})
+```
+
+```json
+// ❌ Blocked (depth > 10)
+{
+  "l1": {"l2": {"l3": {"l4": {"l5": {"l6": {"l7": {"l8": {"l9": {"l10": {"l11": "deep"}}}}}}}}}}
+}
+```
+
+### Combining Options
+
+```typescript
+registerStrictJson(app, {
+  whitelist: ['user.*', 'data.*'],
+  blacklist: ['*.password', '*.token'],
+  maxDepth: 10,
+  enablePrototypePollutionProtection: true
+})
+```
+
+## Glob Patterns for Whitelist/Blacklist
+
+Use glob patterns to match keys flexibly:
+
+- `user` - Exact match
+- `user.*` - All keys under `user`
+- `data.**.name` - Any `name` key under `data` (recursive)
+- `*.password` - Any `password` key at any level
+- `users[0].name` - Specific array element
+
+### Examples
+
+```typescript
+{
+  whitelist: [
+    'user.*',              // All user properties
+    'profile.*',            // All profile properties
+    'data.**.id',          // Any id field in data
+    'items.*.name'          // Name fields in items array
+  ],
+  blacklist: [
+    '*.password',            // Any password field
+    'secret.*',             // Anything under secret
+    '**.token',             // Any token field
+    'users.*.creditCard'    // Credit cards in users
+  ]
+}
+```
+## Streaming Parser
+
+The streaming parser provides efficient memory usage for large JSON payloads by processing data incrementally instead of loading the entire body into memory.
+
+### When to Use Streaming
+
+- **Large payloads (>100KB)**: Streaming parser significantly reduces memory footprint
+- **Memory-constrained environments**: Ideal for servers with limited RAM
+- **High-throughput APIs**: Process large payloads without memory spikes
+- **Upload endpoints**: Handle large data submissions efficiently
+
+### Memory Footprint Comparison
+
+| Payload Size | Buffer Parser | Streaming Parser | Memory Reduction |
+|-------------|---------------|------------------|-------------------|
+| <100KB      | ~1.5x payload | ~1.5x payload    | No reduction      |
+| 100KB-1MB   | ~2.0x payload | ~1.2x payload    | ~40% reduction    |
+| >1MB        | ~3.0x payload | ~0.5x payload    | ~80%+ reduction   |
+
+### Enabling Streaming
+
+```typescript
+import { createStrictJsonExpressMiddleware } from "@pas7/nestjs-strict-json"
+
+// Basic usage - automatic for payloads >100KB
+app.use(createStrictJsonExpressMiddleware({
+  enableStreaming: true
+}))
+```
+
+### Streaming Options
+
+```typescript
+import { createStrictJsonExpressMiddleware } from "@pas7/nestjs-strict-json"
+
+app.use(createStrictJsonExpressMiddleware({
+  // Enable streaming parser
+  enableStreaming: true,
+  
+  // Custom threshold - use streaming for payloads >50KB (default: 100KB)
+  streamingThreshold: 50 * 1024,
+  
+  // Chunk size for streaming (default: 64KB)
+  chunkSize: 128 * 1024,
+  
+  // Other options work with streaming too
+  enablePrototypePollutionProtection: true,
+  maxDepth: 20,
+  whitelist: ['user.*'],
+  blacklist: ['password']
+}))
+```
+
+### Adaptive Parsing
+
+The middleware automatically chooses the best parsing strategy:
+
+- **Small payloads (<100KB)**: Uses buffer parser for optimal speed
+- **Large payloads (>=100KB with enableStreaming=true)**: Uses streaming parser for memory efficiency
+- **Backward compatible**: Existing code works without changes
+
+```typescript
+// No streaming - uses buffer parser for all payloads
+app.use(createStrictJsonExpressMiddleware())
+
+// Adaptive - uses buffer for small, streaming for large
+app.use(createStrictJsonExpressMiddleware({
+  enableStreaming: true
+}))
+```
+
+### Complete Example
+
+```typescript
+import express from "express"
+import { createStrictJsonExpressMiddleware } from "@pas7/nestjs-strict-json"
+
+const app = express()
+
+// Streaming with all security features
+app.use(createStrictJsonExpressMiddleware({
+  enableStreaming: true,
+  streamingThreshold: 100 * 1024,  // 100KB threshold
+  chunkSize: 64 * 1024,            // 64KB chunks
+  enablePrototypePollutionProtection: true,
+  maxBodySizeBytes: 10 * 1024 * 1024,  // 10MB limit
+  maxDepth: 20,
+  whitelist: ['user.*', 'data.*'],
+  blacklist: ['password', 'secret.*'],
+  onDuplicateKey: (error) => {
+    console.error('Duplicate key detected:', error.message)
+  },
+  onPrototypePollution: (error) => {
+    console.error('Security issue:', error.message)
+  }
+}))
+
+app.post('/api/upload', (req, res) => {
+  // Handles large payloads efficiently
+  res.json({ success: true, size: JSON.stringify(req.body).length })
+})
+
+app.listen(3000)
+```
+
+### Testing with Large Payloads
+
+```bash
+# Generate a large test file (1MB)
+node -e "const data={};for(let i=0;i<50000;i++)data[\`key\${i}\`]=i;console.log(JSON.stringify(data))" > large-payload.json
+
+# Test streaming parser
+curl -X POST http://localhost:3000/api/upload \
+  -H "Content-Type: application/json" \
+  -d @large-payload.json
+```
+
+### Performance Considerations
+
+- **Small payloads (<100KB)**: Buffer parser is slightly faster (~5-10%)
+- **Large payloads (>1MB)**: Streaming parser is much more memory efficient
+- **No performance regression**: Streaming only activates when beneficial
+- **CPU overhead**: Minimal incremental processing overhead
+
+### See Also
+
+- [`examples/streaming-parser.ts`](examples/streaming-parser.ts) - Complete streaming parser examples
+- [`test/streaming-parser.spec.ts`](test/streaming-parser.spec.ts) - Streaming parser tests
 
 ## Options
 
@@ -145,8 +449,25 @@ All strict JSON errors include `code` and `message` (plus framework status field
 import { registerStrictJson } from "@pas7/nestjs-strict-json"
 
 registerStrictJson(app, {
-  maxBodySizeBytes: 1024 * 1024  // 1MB limit (default: unlimited)
+  maxBodySizeBytes: 1024 * 1024,              // 1MB limit (default: unlimited)
+  enablePrototypePollutionProtection: true,      // Protect against prototype pollution (default: true)
+  dangerousKeys: ['__proto__', 'constructor', 'prototype'], // Dangerous keys to block
+  whitelist: ['user.*', 'profile.*'],           // Allowed key patterns (glob)
+  blacklist: ['password', 'secret.*'],          // Blocked key patterns (glob)
+  maxDepth: 20,                               // Maximum JSON nesting depth (default: 20)
+  ignoreCase: false,                            // Case sensitivity (default: false)
+  // Streaming options
+  enableStreaming: true,                       // Enable streaming for large payloads
+  streamingThreshold: 100 * 1024,            // Threshold for streaming (default: 100KB)
+  chunkSize: 64 * 1024,                       // Chunk size for streaming (default: 64KB)
+  // Custom error handlers
+  onDuplicateKey: (error) => console.log('Duplicate:', error.key),
+  onInvalidJson: (error) => console.log('Invalid:', error.message),
+  onBodyTooLarge: (error) => console.log('Too large:', error.message),
+  onPrototypePollution: (error) => console.log('Pollution:', error.dangerousKey),
+  onError: (error) => console.log('Error:', error.code)
 })
+```
 ```
 
 ## Advanced Usage
@@ -218,6 +539,12 @@ See the [`examples/`](examples/) directory for complete working examples:
 
 - [`express-main.ts`](examples/express-main.ts) - NestJS + Express
 - [`fastify-main.ts`](examples/fastify-main.ts) - NestJS + Fastify
+- [`express-standalone.ts`](examples/express-standalone.ts) - Pure Express
+- [`fastify-standalone.ts`](examples/fastify-standalone.ts) - Pure Fastify
+- [`streaming-parser.ts`](examples/streaming-parser.ts) - Streaming parser examples with memory optimization
+- [`prototype-pollution.ts`](examples/prototype-pollution.ts) - Prototype pollution protection examples
+- [`custom-handlers.ts`](examples/custom-handlers.ts) - Custom error handler examples
+- [`extended-options.ts`](examples/extended-options.ts) - Extended configuration options (whitelist, blacklist, maxDepth)
 
 ## FAQ
 

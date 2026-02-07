@@ -1,14 +1,33 @@
 import {
   BodyTooLargeError,
+  DepthLimitError,
   DuplicateKeyError,
   InvalidJsonError,
+  PrototypePollutionError,
 } from "./errors.js";
 import { parseTree, type Node, type ParseError } from "jsonc-parser";
 import type { StrictJsonOptions } from "./types.js";
+import { isKeyAllowed } from "./utils.js";
 
 type Duplicate = { key: string; path: string } | null;
+type DangerousKey = { key: string; path: string } | null;
 
-const findDuplicateInNode = (node: Node, path = "$"): Duplicate => {
+const findDuplicateInNode = (
+  node: Node,
+  path = "$",
+  options?: StrictJsonOptions,
+  depth = 0
+): Duplicate | DangerousKey => {
+  // Check depth limit
+  const maxDepth = options?.maxDepth ?? 20;
+  if (depth > maxDepth) {
+    throw new DepthLimitError(depth, maxDepth);
+  }
+
+  // Get default dangerous keys
+  const dangerousKeys = options?.dangerousKeys || ['__proto__', 'constructor', 'prototype'];
+  const enablePrototypeProtection = options?.enablePrototypePollutionProtection !== false;
+
   if (node.type === "object") {
     const seen = new Set<string>();
 
@@ -19,12 +38,27 @@ const findDuplicateInNode = (node: Node, path = "$"): Duplicate => {
       const [keyNode, valueNode] = prop.children;
       const key = String(keyNode.value ?? "");
 
+      // Check whitelist/blacklist (but only if whitelist or blacklist is specified)
+      // Use keyPath for pattern matching (e.g., "user.*" matches "$.user.name")
+      const keyPath = `${path}.${key}`;
+      if ((options?.whitelist !== undefined || options?.blacklist !== undefined) &&
+          !isKeyAllowed(keyPath, options?.whitelist, options?.blacklist)) {
+        throw new InvalidJsonError(`Key '${key}' at ${keyPath} is not allowed`);
+      }
+
+      // Check for prototype pollution (only checks the key name, not the path)
+      if (enablePrototypeProtection && dangerousKeys.includes(key)) {
+        throw new PrototypePollutionError(key, keyPath);
+      }
+
+      // Check for duplicate keys
       if (seen.has(key)) {
-        return { key, path: `${path}.${key}` };
+        return { key, path: keyPath };
       }
       seen.add(key);
 
-      const nested = findDuplicateInNode(valueNode, `${path}.${key}`);
+      // Recursively check nested objects
+      const nested = findDuplicateInNode(valueNode, keyPath, options, depth + 1);
       if (nested) return nested;
     }
   }
@@ -33,7 +67,7 @@ const findDuplicateInNode = (node: Node, path = "$"): Duplicate => {
     for (let i = 0; i < (node.children ?? []).length; i += 1) {
       const child = node.children?.[i];
       if (!child) continue;
-      const nested = findDuplicateInNode(child, `${path}[${i}]`);
+      const nested = findDuplicateInNode(child, `${path}[${i}]`, options, depth + 1);
       if (nested) return nested;
     }
   }
@@ -41,7 +75,10 @@ const findDuplicateInNode = (node: Node, path = "$"): Duplicate => {
   return null;
 };
 
-const findDuplicateKeysInJson = (jsonStr: string): Duplicate => {
+const findDuplicateKeysInJson = (
+  jsonStr: string,
+  options?: StrictJsonOptions
+): Duplicate => {
   const errors: ParseError[] = [];
   const root = parseTree(jsonStr, errors, {
     allowTrailingComma: false,
@@ -50,9 +87,55 @@ const findDuplicateKeysInJson = (jsonStr: string): Duplicate => {
   });
 
   if (!root || errors.length > 0) return null;
-  return findDuplicateInNode(root, "$");
+  
+  // This will throw PrototypePollutionError, DepthLimitError, or InvalidJsonError
+  // if detected during traversal
+  try {
+    return findDuplicateInNode(root, "$", options) as Duplicate;
+  } catch (e) {
+    // Re-throw custom errors - they'll be caught by parseStrictJson
+    if (
+      e instanceof PrototypePollutionError ||
+      e instanceof DepthLimitError ||
+      e instanceof InvalidJsonError
+    ) {
+      throw e;
+    }
+    throw e;
+  }
 };
 
+// Custom error handler wrapper - sync version
+const invokeErrorHandlerSync = (
+  handler: ((error: any) => void | Promise<void>) | undefined,
+  error: any
+): void => {
+  if (handler) {
+    try {
+      handler(error);
+    } catch (handlerError) {
+      // Handler errors should not prevent original error from being thrown
+      // Do nothing, just ignore handler errors
+    }
+  }
+};
+
+// Custom error handler wrapper - async version
+const invokeErrorHandlerAsync = async (
+  handler: ((error: any) => void | Promise<void>) | undefined,
+  error: any
+): Promise<void> => {
+  if (handler) {
+    try {
+      await handler(error);
+    } catch (handlerError) {
+      // Handler errors should not prevent original error from being thrown
+      // Do nothing, just ignore handler errors
+    }
+  }
+};
+
+// Synchronous version (no async handler support)
 export const parseStrictJson = (
   raw: string | Buffer,
   options?: StrictJsonOptions,
@@ -60,26 +143,134 @@ export const parseStrictJson = (
   const maxBodySizeBytes = options?.maxBodySizeBytes;
   const buf = typeof raw === "string" ? Buffer.from(raw, "utf8") : raw;
 
+  // Check body size limit
   if (
     typeof maxBodySizeBytes === "number" &&
     buf.byteLength > maxBodySizeBytes
   ) {
-    throw new BodyTooLargeError(maxBodySizeBytes);
+    const error = new BodyTooLargeError(maxBodySizeBytes);
+    invokeErrorHandlerSync(options?.onBodyTooLarge, error);
+    invokeErrorHandlerSync(options?.onError, error);
+    throw error;
   }
 
   try {
     const jsonStr = buf.toString("utf-8");
 
-    // Check for duplicate keys before parsing
-    const duplicate = findDuplicateKeysInJson(jsonStr);
+    // Check for duplicate keys, prototype pollution, depth limit, and whitelist/blacklist
+    const duplicate = findDuplicateKeysInJson(jsonStr, options);
     if (duplicate) {
-      throw new DuplicateKeyError(duplicate.path, duplicate.key);
+      const error = new DuplicateKeyError(duplicate.path, duplicate.key);
+      invokeErrorHandlerSync(options?.onDuplicateKey, error);
+      invokeErrorHandlerSync(options?.onError, error);
+      throw error;
     }
 
     return JSON.parse(jsonStr);
   } catch (e) {
-    if (e instanceof DuplicateKeyError || e instanceof BodyTooLargeError)
+    // Handle prototype pollution errors thrown from findDuplicateInNode
+    if (e instanceof PrototypePollutionError) {
+      invokeErrorHandlerSync(options?.onPrototypePollution, e);
+      invokeErrorHandlerSync(options?.onError, e);
       throw e;
-    throw new InvalidJsonError("Invalid JSON");
+    }
+
+    // Handle depth limit errors thrown from findDuplicateInNode
+    if (e instanceof DepthLimitError) {
+      invokeErrorHandlerSync(options?.onError, e);
+      throw e;
+    }
+
+    // Handle custom errors that were already thrown
+    if (
+      e instanceof DuplicateKeyError ||
+      e instanceof BodyTooLargeError
+    ) {
+      // Error handlers already invoked above, just rethrow
+      throw e;
+    }
+
+    // Handle InvalidJsonError or other parsing errors
+    if (e instanceof InvalidJsonError) {
+      invokeErrorHandlerSync(options?.onInvalidJson, e);
+      invokeErrorHandlerSync(options?.onError, e);
+      throw e;
+    }
+
+    // Handle general JSON parse errors
+    const error = new InvalidJsonError("Invalid JSON");
+    invokeErrorHandlerSync(options?.onInvalidJson, error);
+    invokeErrorHandlerSync(options?.onError, error);
+    throw error;
+  }
+};
+
+// Async version (full async handler support)
+export const parseStrictJsonAsync = async (
+  raw: string | Buffer,
+  options?: StrictJsonOptions,
+): Promise<unknown> => {
+  const maxBodySizeBytes = options?.maxBodySizeBytes;
+  const buf = typeof raw === "string" ? Buffer.from(raw, "utf8") : raw;
+
+  // Check body size limit
+  if (
+    typeof maxBodySizeBytes === "number" &&
+    buf.byteLength > maxBodySizeBytes
+  ) {
+    const error = new BodyTooLargeError(maxBodySizeBytes);
+    await invokeErrorHandlerAsync(options?.onBodyTooLarge, error);
+    await invokeErrorHandlerAsync(options?.onError, error);
+    throw error;
+  }
+
+  try {
+    const jsonStr = buf.toString("utf-8");
+
+    // Check for duplicate keys, prototype pollution, depth limit, and whitelist/blacklist
+    const duplicate = findDuplicateKeysInJson(jsonStr, options);
+    if (duplicate) {
+      const error = new DuplicateKeyError(duplicate.path, duplicate.key);
+      await invokeErrorHandlerAsync(options?.onDuplicateKey, error);
+      await invokeErrorHandlerAsync(options?.onError, error);
+      throw error;
+    }
+
+    return JSON.parse(jsonStr);
+  } catch (e) {
+    // Handle prototype pollution errors thrown from findDuplicateInNode
+    if (e instanceof PrototypePollutionError) {
+      await invokeErrorHandlerAsync(options?.onPrototypePollution, e);
+      await invokeErrorHandlerAsync(options?.onError, e);
+      throw e;
+    }
+
+    // Handle depth limit errors thrown from findDuplicateInNode
+    if (e instanceof DepthLimitError) {
+      await invokeErrorHandlerAsync(options?.onError, e);
+      throw e;
+    }
+
+    // Handle custom errors that were already thrown
+    if (
+      e instanceof DuplicateKeyError ||
+      e instanceof BodyTooLargeError
+    ) {
+      // Error handlers already invoked above, just rethrow
+      throw e;
+    }
+
+    // Handle InvalidJsonError or other parsing errors
+    if (e instanceof InvalidJsonError) {
+      await invokeErrorHandlerAsync(options?.onInvalidJson, e);
+      await invokeErrorHandlerAsync(options?.onError, e);
+      throw e;
+    }
+
+    // Handle general JSON parse errors
+    const error = new InvalidJsonError("Invalid JSON");
+    await invokeErrorHandlerAsync(options?.onInvalidJson, error);
+    await invokeErrorHandlerAsync(options?.onError, error);
+    throw error;
   }
 };

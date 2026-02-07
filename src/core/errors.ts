@@ -38,3 +38,33 @@ export class BodyTooLargeError extends StrictJsonError {
     });
   }
 }
+
+export class PrototypePollutionError extends StrictJsonError {
+  readonly code = 'STRICT_JSON_PROTOTYPE_POLLUTION' as const;
+  constructor(
+    public readonly dangerousKey: string,
+    public readonly path: string
+  ) {
+    super({
+      code: 'STRICT_JSON_PROTOTYPE_POLLUTION',
+      message: `Prototype pollution attempt detected: dangerous key '${dangerousKey}' at ${path}`,
+      path,
+      dangerousKey
+    });
+  }
+}
+
+export class DepthLimitError extends StrictJsonError {
+  readonly code = 'STRICT_JSON_DEPTH_LIMIT' as const;
+  constructor(
+    public readonly currentDepth: number,
+    public readonly maxDepth: number
+  ) {
+    super({
+      code: 'STRICT_JSON_DEPTH_LIMIT',
+      message: `JSON depth limit exceeded: ${currentDepth} > ${maxDepth}`,
+      currentDepth,
+      maxDepth
+    });
+  }
+}

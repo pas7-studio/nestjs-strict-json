@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { parseStrictJson } from "../core/parser.js";
+import { parseJsonStream, shouldUseStreaming } from "../core/streaming-parser.js";
 import type { StrictJsonOptions } from "../core/types.js";
 import { StrictJsonError } from "../core/errors.js";
 
@@ -40,10 +41,24 @@ export const createStrictJsonExpressMiddleware =
     }
 
     try {
-      const raw = await readBody(req, options?.maxBodySizeBytes);
-      const parsed = parseStrictJson(raw, options);
-      req.body = parsed;
-      next();
+      // Check content-length header to determine if streaming should be used
+      const contentLength = req.headers["content-length"]
+        ? parseInt(req.headers["content-length"], 10)
+        : undefined;
+
+      // Determine which parsing strategy to use
+      if (shouldUseStreaming(contentLength, options)) {
+        // Use streaming parser for large payloads
+        const parsed = await parseJsonStream(req, options);
+        req.body = parsed;
+        next();
+      } else {
+        // Use buffer parser for small payloads (backward compatible)
+        const raw = await readBody(req, options?.maxBodySizeBytes);
+        const parsed = parseStrictJson(raw, options);
+        req.body = parsed;
+        next();
+      }
     } catch (e) {
       if (e instanceof StrictJsonError) {
         const payload = {
@@ -71,6 +86,35 @@ export const createStrictJsonExpressMiddleware =
           }),
         );
         return;
+      }
+
+      // Handle streaming parser errors
+      if (e instanceof Error) {
+        const isDuplicateKey = e.message.includes("Duplicate key");
+        const isPrototypePollution = e.message.includes("Prototype pollution");
+        const isDepthLimit = e.message.includes("Depth limit");
+        const isKeyNotAllowed = e.message.includes("is not allowed");
+
+        if (isDuplicateKey || isPrototypePollution || isDepthLimit || isKeyNotAllowed) {
+          const code = isDuplicateKey
+            ? "STRICT_JSON_DUPLICATE_KEY"
+            : isPrototypePollution
+              ? "STRICT_JSON_PROTOTYPE_POLLUTION"
+              : isDepthLimit
+                ? "STRICT_JSON_DEPTH_LIMIT"
+                : "STRICT_JSON_INVALID_JSON";
+
+          res.statusCode = 400;
+          res.setHeader("content-type", "application/json; charset=utf-8");
+          res.end(
+            JSON.stringify({
+              statusCode: 400,
+              code,
+              message: e.message,
+            }),
+          );
+          return;
+        }
       }
 
       res.statusCode = 400;
