@@ -1,0 +1,41 @@
+{
+  "generatedAt": "2026-02-07T17:48:12.154Z",
+  "payload": {
+    "users": 10000,
+    "approximateSizeMb": 1.24
+  },
+  "notes": {
+    "node": "v24.6.0",
+    "gcExposed": true
+  },
+  "results": [
+    {
+      "name": "Native JSON.parse",
+      "iterations": 80,
+      "avgMs": 3.7877774999999994,
+      "peakHeapDeltaMb": 9.621208190917969,
+      "retainedHeapMb": -0.00931549072265625
+    },
+    {
+      "name": "jsonc-parser + JSON.parse",
+      "iterations": 25,
+      "avgMs": 21.482776000000005,
+      "peakHeapDeltaMb": 49.10908508300781,
+      "retainedHeapMb": 0.00018310546875
+    },
+    {
+      "name": "@pas7 strict (baseline)",
+      "iterations": 35,
+      "avgMs": 76.14046857142857,
+      "peakHeapDeltaMb": 253.60122680664062,
+      "retainedHeapMb": 0.0023193359375
+    },
+    {
+      "name": "@pas7 strict (optimized)",
+      "iterations": 140,
+      "avgMs": 3.2742850000000026,
+      "peakHeapDeltaMb": 61.797821044921875,
+      "retainedHeapMb": -0.000823974609375
+    }
+  ]
+}

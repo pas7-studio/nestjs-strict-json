@@ -78,11 +78,12 @@ class LRUCache<K, V> {
 const parseCache = new LRUCache<string, unknown>();
 
 // Cache cleanup interval (every 5 minutes)
-setInterval(() => {
+const cacheCleanupInterval = setInterval(() => {
   // LRU cache automatically expires on access, but periodic cleanup
   // prevents stale entries from hanging in memory indefinitely.
   parseCache.pruneExpired();
 }, 5 * 60 * 1000);
+cacheCleanupInterval.unref();
 
 // Export cache functions for manual control
 export function clearParseCache(): void {

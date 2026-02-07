@@ -1,83 +1,59 @@
-# @pas7/nestjs-strict-json
+# NestJS Strict JSON Parser for Security and Performance
 
-Strict JSON security for NestJS, Express, and Fastify.
+`@pas7/nestjs-strict-json` is a strict JSON parser for **NestJS**, **Express**, and **Fastify**.
 
-Reject malformed, ambiguous, and dangerous JSON payloads before they reach your DTO validation or business logic.
+It blocks dangerous and ambiguous payloads at parser level:
+- duplicate JSON keys
+- prototype pollution keys (`__proto__`, `constructor`, `prototype`)
+- excessive JSON depth (DoS-style payloads)
+- disallowed key paths (whitelist/blacklist)
+
+If you need secure JSON parsing in Node.js APIs, this package is built for that exact use case.
 
 [![npm version](https://img.shields.io/npm/v/%40pas7%2Fnestjs-strict-json?style=flat-square)](https://www.npmjs.com/package/@pas7/nestjs-strict-json)
 [![Release](https://img.shields.io/github/v/release/pas7-studio/nestjs-strict-json?sort=semver&style=flat-square)](https://github.com/pas7-studio/nestjs-strict-json/releases)
 [![Build Status](https://github.com/pas7-studio/nestjs-strict-json/actions/workflows/ci.yml/badge.svg)](https://github.com/pas7-studio/nestjs-strict-json/actions/workflows/ci.yml)
 [![License](https://img.shields.io/github/license/pas7-studio/nestjs-strict-json?style=flat-square)](https://github.com/pas7-studio/nestjs-strict-json/blob/main/LICENSE)
-[![TypeScript](https://img.shields.io/badge/TypeScript-Ready-brightgreen?style=flat-square)](https://www.typescriptlang.org/)
 
-## Why This Library
+## Why teams use this
 
-Default JSON parsing in many stacks is permissive:
-- Duplicate keys are silently overwritten.
-- Prototype pollution keys may pass unless explicitly blocked.
-- Deep nested payloads can be used for DoS-style pressure.
+- **Security first**: parser-level rejection of duplicate keys and prototype pollution attempts.
+- **Production ready**: works with NestJS, vanilla Express, and vanilla Fastify.
+- **Performance controls**: cache, lazy mode, streaming threshold, fast path.
+- **Typed and explicit errors**: stable error codes for monitoring and incident response.
 
-`@pas7/nestjs-strict-json` enforces strict behavior at parser level.
+## Benchmark Snapshot (Large Payload)
 
-## What You Get
+Latest local benchmark (`2026-02-07`, payload `~1.24 MB`, 10,000 users):
 
-- Duplicate key detection (`STRICT_JSON_DUPLICATE_KEY`)
-- Prototype pollution protection (`__proto__`, `constructor`, `prototype` by default)
-- Configurable depth limit (`STRICT_JSON_DEPTH_LIMIT`)
-- Whitelist/blacklist key filtering with glob patterns
-- Configurable body size limits (`STRICT_JSON_BODY_TOO_LARGE`)
-- Custom error hooks for monitoring/alerting
-- Optional optimization profile: lazy mode, cache, streaming, fast path
-- Works with NestJS, vanilla Express, and vanilla Fastify
+| Implementation | Avg ms/op | Peak heap delta (MB) | Retained heap (MB) |
+|---|---:|---:|---:|
+| Native `JSON.parse` | 3.7878 | 9.62 | -0.01 |
+| `jsonc-parser + JSON.parse` | 21.4828 | 49.11 | 0.00 |
+| `@pas7 strict (baseline)` | 76.1405 | 253.60 | 0.00 |
+| `@pas7 strict (optimized)` | 3.2743 | 61.80 | -0.00 |
 
-## Implemented Achievements
+Key takeaways:
+- `@pas7 strict (optimized)` was faster than native in this run.
+- `@pas7 strict (optimized)` was much faster than `jsonc-parser + JSON.parse`.
+- Security checks and optimization profile significantly change results, so compare by scenario.
 
-### Verified in repository
+Reproduce:
 
-- Security and validation
-- Duplicate key detection across nested object scopes
-- Prototype pollution protection
-- Depth limit enforcement (DoS hardening)
-- Whitelist/blacklist filtering with glob patterns
-- Structured strict error codes and details
+```bash
+npm run bench:compare
+```
 
-- Configuration and flexibility
-- Lazy mode for large payloads
-- Custom error handlers (`onDuplicateKey`, `onInvalidJson`, `onBodyTooLarge`, `onPrototypePollution`, `onError`)
-- Adaptive middleware strategy (buffer vs streaming by threshold)
-- Configurable streaming threshold and chunk size
-- Parse result caching with LRU behavior
-- Fast path option for trusted/simple payloads
-
-- Documentation and delivery
-- Full README, `ROADMAP.md`, `CHANGELOG.md`
-- Performance benchmark suite and generated reports under `performance/reports/`
-- Optimization guide in `docs/OPTIMIZATION-GUIDE.md`
-
-### Performance claims from internal reports
-
-The repository contains strong optimization claims (including `5,740x` and major memory reduction) in:
-- `CHANGELOG.md`
-- `performance/reports/optimization-final-report.md`
-
-Use these as project claims with source attribution. For external/public positioning, re-run benchmarks and publish one canonical report snapshot to avoid mixed numbers across documents.
-
-### Positioning summary
-
-Compared with common defaults (native parser / default body parsers), this project prioritizes parser-level JSON security with production-focused configurability and benchmark coverage.
-
-## Why It Wins vs Common Alternatives
+## Security Capability Comparison
 
 | Capability | Native `JSON.parse` | `express.json()` / default parsers | `@pas7/nestjs-strict-json` |
 |---|---|---|---|
 | Duplicate key rejection | No | No | Yes |
-| Prototype pollution protection | No | No | Yes |
-| Depth limit enforcement | No | No | Yes |
+| Prototype pollution key blocking | No | No | Yes |
+| Max depth enforcement | No | No | Yes |
 | Key whitelist/blacklist | No | No | Yes |
-| Unified security behavior across Nest/Express/Fastify | No | Partial | Yes |
-| Custom parser-level error handlers | No | Limited | Yes |
-
-For security-hardening use cases, this package is designed to be the stronger default.
+| Unified behavior across Nest/Express/Fastify | No | Partial | Yes |
+| Structured parser error codes | No | Limited | Yes |
 
 ## Installation
 
@@ -87,7 +63,7 @@ npm install @pas7/nestjs-strict-json
 
 ## Quick Start
 
-### NestJS + Fastify (recommended)
+### NestJS + Fastify
 
 ```ts
 import { NestFactory } from "@nestjs/core";
@@ -155,15 +131,6 @@ server.post("/api", async (request) => request.body);
 server.listen({ port: 3000 });
 ```
 
-## Add It to Your Existing Project
-
-1. Install package: `npm i @pas7/nestjs-strict-json`
-2. Register strict parser before app starts accepting traffic.
-3. If using Nest + Express, set `{ bodyParser: false }`.
-4. Start with secure defaults, then tune performance options.
-5. Add a monitoring hook (`onError`) to track malformed traffic.
-6. Verify behavior with duplicated-key and malformed JSON requests.
-
 ## API
 
 ### Nest integration
@@ -183,7 +150,7 @@ server.listen({ port: 3000 });
 - `clearParseCache()`
 - `getParseCacheSize()`
 
-## Configuration (`StrictJsonOptions`)
+## StrictJsonOptions
 
 ```ts
 type StrictJsonOptions = {
@@ -222,144 +189,25 @@ type StrictJsonOptions = {
 };
 ```
 
-## Error Format
+## Error Codes
 
-### Duplicate key
+- `STRICT_JSON_DUPLICATE_KEY`
+- `STRICT_JSON_INVALID_JSON`
+- `STRICT_JSON_BODY_TOO_LARGE`
+- `STRICT_JSON_PROTOTYPE_POLLUTION`
+- `STRICT_JSON_DEPTH_LIMIT`
 
-```json
-{
-  "code": "STRICT_JSON_DUPLICATE_KEY",
-  "message": "Duplicate JSON key \"flag\" at $.flag",
-  "details": {
-    "path": "$.flag",
-    "key": "flag"
-  }
-}
-```
-
-### Invalid JSON
-
-```json
-{
-  "code": "STRICT_JSON_INVALID_JSON",
-  "message": "Invalid JSON"
-}
-```
-
-### Body too large
-
-```json
-{
-  "code": "STRICT_JSON_BODY_TOO_LARGE",
-  "message": "Request body exceeds max size of 1048576 bytes"
-}
-```
-
-### Prototype pollution
-
-```json
-{
-  "code": "STRICT_JSON_PROTOTYPE_POLLUTION",
-  "message": "Prototype pollution attempt detected: dangerous key '__proto__' at $.__proto__"
-}
-```
-
-### Depth limit
-
-```json
-{
-  "code": "STRICT_JSON_DEPTH_LIMIT",
-  "message": "JSON depth limit exceeded: 21 > 20"
-}
-```
-
-## Benchmarks
-
-### Current repository benchmark snapshots
-
-Based on current in-repo reports:
-- `performance/reports/latest.md`
-- `performance/reports/final-summary.md`
-- `performance/reports/results.json`
-
-Latest generated timestamp in reports: `2026-02-07`.
-
-Representative large payload results from `performance/reports/latest.md`:
-- `5000x10 fields`: `6.880 ms`
-- `10000x5 fields`: `8.493 ms`
-- `20000x5 fields`: `13.937 ms`
-
-Representative comparison insights from `performance/reports/final-summary.md`:
-- Native parse remains faster on raw parsing throughput.
-- This library adds parser-level security guarantees unavailable in default parsers.
-
-### Important methodology note
-
-Many benchmark scenarios include cache-enabled runs and security checks. Compare results by scenario, not as a single universal number.
-
-### Run benchmarks locally
-
-```bash
-npm run benchmark
-npx vitest run performance/benchmarks/parser --config vitest.benchmark.config.ts
-npx vitest run performance/benchmarks/adapters --config vitest.benchmark.config.ts
-npx vitest run performance/benchmarks/comparisons --config vitest.benchmark.config.ts
-node performance/utils/generate-report.mjs
-```
-
-If you need deterministic non-cache baseline numbers, run benchmarks with `enableCache: false` in your benchmark cases.
-
-## Practical Performance Profiles
-
-### 1) Secure default profile (recommended for external traffic)
+## Recommended Production Profile
 
 ```ts
 registerStrictJson(app, {
+  maxBodySizeBytes: 1024 * 1024,
   enablePrototypePollutionProtection: true,
   maxDepth: 20,
   enableCache: true,
+  enableFastPath: true,
 });
 ```
-
-### 2) High-throughput trusted upstream profile
-
-```ts
-registerStrictJson(app, {
-  lazyMode: true,
-  lazyModeThreshold: 100 * 1024,
-  lazyModeSkipPrototype: true,
-  lazyModeSkipWhitelist: true,
-  lazyModeSkipBlacklist: false,
-  enableCache: true,
-});
-```
-
-### 3) Large payload profile (Express)
-
-```ts
-app.use(
-  createStrictJsonExpressMiddleware({
-    enableStreaming: true,
-    streamingThreshold: 100 * 1024,
-    chunkSize: 64 * 1024,
-    maxBodySizeBytes: 10 * 1024 * 1024,
-  }),
-);
-```
-
-## Security Model Summary
-
-Always enforced in standard flow:
-- Duplicate key detection
-- Syntax validation
-- Body size checks
-
-Configurable hardening:
-- Prototype pollution checks
-- Key whitelist/blacklist
-- Max depth
-
-Optimization flags (`lazyMode`, `enableFastPath`) are powerful and should be used intentionally by trust level.
 
 ## Compatibility
 
@@ -368,41 +216,6 @@ Optimization flags (`lazyMode`, `enableFastPath`) are powerful and should be use
 - Express 4+
 - Fastify 4+
 
-## Project Docs
-
-- `docs/OPTIMIZATION-GUIDE.md`
-- `performance/README.md`
-- `performance/reports/latest.md`
-- `performance/reports/final-summary.md`
-- `CHANGELOG.md`
-- `ROADMAP.md`
-
-## Examples
-
-- `examples/express-main.ts`
-- `examples/fastify-main.ts`
-- `examples/express-standalone.ts`
-- `examples/fastify-standalone.ts`
-- `examples/streaming-parser.ts`
-- `examples/prototype-pollution.ts`
-- `examples/custom-handlers.ts`
-- `examples/extended-options.ts`
-- `examples/optimized-parsing.ts`
-
-## Contributing
-
-See `CONTRIBUTING.md`.
-
-## Security
-
-See `SECURITY.md`.
-
 ## License
 
 Apache-2.0
-
-## Donations
-
-[Ko-fi](https://ko-fi.com/pas7studio)
-
-PayPal: https://www.paypal.com/ncp/payment/KDSSNKK8REDM8

@@ -1,6 +1,6 @@
 {
   "name": "@pas7/nestjs-strict-json",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Strict JSON parsing for NestJS (Express/Fastify) with duplicate-key detection",
   "license": "Apache-2.0",
   "repository": {
@@ -38,6 +38,7 @@
   "scripts": {
     "build": "tsup",
     "bench:parser": "npm run build && node scripts/benchmark-parser.mjs",
+    "bench:compare": "npm run build && node --expose-gc scripts/benchmark-comparison.mjs",
     "benchmark": "node performance/run-all-benchmarks.mjs",
     "benchmark:parser": "npx vitest run performance/benchmarks/parser/",
     "benchmark:adapters": "npx vitest run performance/benchmarks/adapters/",
