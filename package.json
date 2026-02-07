@@ -1,6 +1,6 @@
 {
   "name": "@pas7/nestjs-strict-json",
-  "version": "0.2.3",
+  "version": "0.4.0",
   "description": "Strict JSON parsing for NestJS (Express/Fastify) with duplicate-key detection",
   "license": "Apache-2.0",
   "repository": {
