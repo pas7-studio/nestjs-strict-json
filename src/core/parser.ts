@@ -5,7 +5,7 @@ import {
   InvalidJsonError,
   PrototypePollutionError,
 } from "./errors.js";
-import { parseTree, type Node, type ParseError } from "jsonc-parser";
+import { parseTree, getNodeValue, type Node, type ParseError } from "jsonc-parser";
 import type { StrictJsonOptions } from "./types.js";
 import { isKeyAllowed } from "./utils.js";
 
@@ -24,9 +24,16 @@ const findDuplicateInNode = (
     throw new DepthLimitError(depth, maxDepth);
   }
 
-  // Get default dangerous keys
-  const dangerousKeys = options?.dangerousKeys || ['__proto__', 'constructor', 'prototype'];
+  // Pre-compute frequently used values for better performance
   const enablePrototypeProtection = options?.enablePrototypePollutionProtection !== false;
+  
+  // Use Set for O(1) lookup instead of Array.includes O(n)
+  const dangerousKeysSet = enablePrototypeProtection
+    ? new Set(options?.dangerousKeys || ['__proto__', 'constructor', 'prototype'])
+    : new Set<string>();
+  
+  // Pre-compute whitelist/blacklist check to avoid repeated property access
+  const hasWhitelistOrBlacklist = options?.whitelist !== undefined || options?.blacklist !== undefined;
 
   if (node.type === "object") {
     const seen = new Set<string>();
@@ -41,13 +48,13 @@ const findDuplicateInNode = (
       // Check whitelist/blacklist (but only if whitelist or blacklist is specified)
       // Use keyPath for pattern matching (e.g., "user.*" matches "$.user.name")
       const keyPath = `${path}.${key}`;
-      if ((options?.whitelist !== undefined || options?.blacklist !== undefined) &&
-          !isKeyAllowed(keyPath, options?.whitelist, options?.blacklist)) {
+      if (hasWhitelistOrBlacklist && !isKeyAllowed(keyPath, options?.whitelist, options?.blacklist)) {
         throw new InvalidJsonError(`Key '${key}' at ${keyPath} is not allowed`);
       }
 
       // Check for prototype pollution (only checks the key name, not the path)
-      if (enablePrototypeProtection && dangerousKeys.includes(key)) {
+      // Using Set.has() for O(1) lookup instead of Array.includes O(n)
+      if (enablePrototypeProtection && dangerousKeysSet.has(key)) {
         throw new PrototypePollutionError(key, keyPath);
       }
 
@@ -153,20 +160,20 @@ export const parseStrictJson = (
     invokeErrorHandlerSync(options?.onError, error);
     throw error;
   }
+try {
+  const jsonStr = buf.toString("utf-8");
 
-  try {
-    const jsonStr = buf.toString("utf-8");
+  // Check for duplicate keys, prototype pollution, depth limit, and whitelist/blacklist
+  const duplicate = findDuplicateKeysInJson(jsonStr, options);
+  if (duplicate) {
+    const error = new DuplicateKeyError(duplicate.path, duplicate.key);
+    invokeErrorHandlerSync(options?.onDuplicateKey, error);
+    invokeErrorHandlerSync(options?.onError, error);
+    throw error;
+  }
 
-    // Check for duplicate keys, prototype pollution, depth limit, and whitelist/blacklist
-    const duplicate = findDuplicateKeysInJson(jsonStr, options);
-    if (duplicate) {
-      const error = new DuplicateKeyError(duplicate.path, duplicate.key);
-      invokeErrorHandlerSync(options?.onDuplicateKey, error);
-      invokeErrorHandlerSync(options?.onError, error);
-      throw error;
-    }
-
-    return JSON.parse(jsonStr);
+  return JSON.parse(jsonStr);
+    return parsedValue;
   } catch (e) {
     // Handle prototype pollution errors thrown from findDuplicateInNode
     if (e instanceof PrototypePollutionError) {

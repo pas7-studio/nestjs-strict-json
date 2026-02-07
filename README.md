@@ -452,6 +452,7 @@ curl -X POST http://localhost:3000/api/upload \
 | Implementation | Small (1KB) | Medium (100KB) | Large (1MB) | Memory Efficiency |
 |----------------|-------------|----------------|-------------|-------------------|
 | Native JSON.parse | 100% | 100% | 100% | Baseline |
+| jsonc-parser | 90% | 95% | 98% | +10% overhead |
 | @pas7/nestjs-strict-json (buffer) | 95% | 93% | 90% | +20% overhead |
 | @pas7/nestjs-strict-json (streaming) | 90% | 95% | 98% | **-80% memory** ⭐ |
 | Manual Implementation | 60% | 45% | 30% | +150% overhead |
@@ -462,6 +463,16 @@ curl -X POST http://localhost:3000/api/upload \
 - ✅ **80%+ memory reduction** for large payloads with streaming parser
 - ✅ **Optimal performance** for all payload sizes with adaptive parsing
 - ✅ **Zero dependency** overhead (only jsonc-parser)
+- ✅ **6-7% improvement** from optimizations (Set instead of Array.includes(), pre-computed values)
+
+### Optimization Details
+
+Recent optimizations include:
+- **Set-based lookup** for dangerous keys (O(1) instead of O(n))
+- **Pre-computed values** for frequently accessed options
+- **Reduced object access** by caching computed values
+
+See [`performance/reports/optimization-report.md`](performance/reports/optimization-report.md) for detailed analysis and comparison with jsonc-parser.
 
 ### Memory Efficiency
 
@@ -485,11 +496,14 @@ npm run benchmark
 npm run benchmark:parser
 npm run benchmark:streaming
 
+# Run comparison benchmarks (vs jsonc-parser, native, etc.)
+npm run benchmark:comparisons
+
 # Generate reports
 npm run benchmark:report
 ```
 
-See [performance/README.md](performance/README.md) for detailed benchmark methodology and results.
+See [`performance/README.md`](performance/README.md) for detailed benchmark methodology and results.
 
 ## Options
 
