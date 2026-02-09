@@ -101,7 +101,6 @@ export class LRUCache<K = string, V = unknown> implements ICache<K, V> {
       }
     }
 
-    const effectiveTTL = ttl ?? this._ttl;
     this.cache.set(key, { value, timestamp: Date.now() });
   }
 

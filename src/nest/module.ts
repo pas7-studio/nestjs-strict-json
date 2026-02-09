@@ -6,7 +6,6 @@ import {
   Inject,
   Optional,
   ValueProvider,
-  Provider,
 } from "@nestjs/common";
 import type { INestApplication } from "@nestjs/common";
 import type { StrictJsonOptions } from "../core/types.js";

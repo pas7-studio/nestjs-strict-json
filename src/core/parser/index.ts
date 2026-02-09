@@ -5,8 +5,8 @@ import {
   InvalidJsonError,
   PrototypePollutionError,
 } from "../errors.js";
-import type { StrictJsonOptions } from "../types.js";
-import { parseCache, buildCacheKey, clearParseCache, getParseCacheSize } from "./cache-manager.js";
+import type { StrictJsonOptions, StrictJsonErrorHandler } from "../types.js";
+import { parseCache, buildCacheKey } from "./cache-manager.js";
 import { findDuplicateKeysInJson } from "./parser-core.js";
 import { parseWithFastPath } from "./fast-path.js";
 import { shouldUseStreamingForPayload, parseLargePayload } from "./streaming.js";
@@ -205,16 +205,16 @@ class JsonParser {
 
   /**
    * Invokes an error handler either synchronously or asynchronously.
-   * 
+   *
    * @param handler - The custom error handler function (optional)
    * @param error - The error to pass to the handler
    * @param isAsync - Whether to invoke the handler asynchronously
    */
   private invokeHandler(handler: unknown, error: unknown, isAsync: boolean): void {
     if (isAsync) {
-      errorHandler.invokeAsync(handler as any, error);
+      errorHandler.invokeAsync(handler as StrictJsonErrorHandler | undefined, error);
     } else {
-      errorHandler.invokeSync(handler as any, error);
+      errorHandler.invokeSync(handler as StrictJsonErrorHandler | undefined, error);
     }
   }
 }

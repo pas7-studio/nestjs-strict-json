@@ -1,4 +1,4 @@
-import { Injectable, Inject, Optional } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import type { ICache } from '../core/cache/index.js';
 import { STRICT_JSON_CACHE } from './module.js';
 
