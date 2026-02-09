@@ -20,8 +20,14 @@ export type {
 export {
   globToRegex,
   matchGlobPattern,
-  isKeyAllowed,
 } from "./core/utils.js";
+export {
+  isKeyAllowed,
+  KeyPolicyValidator,
+  PatternMatcher,
+  createKeyPolicyValidator,
+  createPatternMatcher,
+} from "./core/validation/index.js";
 
 export { registerStrictJson } from "./nest/register.js";
 export { StrictJsonModule } from "./nest/module.js";

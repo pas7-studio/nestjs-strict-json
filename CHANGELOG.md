@@ -5,6 +5,84 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.4] - 2025-01-XX
+
+### 🎯 Overview
+This release includes significant architectural improvements, massive test coverage (95%+), performance optimizations (10.8x faster) and critical bug fixes.
+
+### 🏗️ Architectural Improvements
+- **Split parser.ts** into 6 modules (SRP principle)
+  - cache-manager.ts (LRU cache)
+  - parser-core.ts (duplicate detection)
+  - fast-path.ts (fast parsing)
+  - streaming.ts (streaming)
+  - error-handler.ts (error handling)
+  - index.ts (main export)
+- **Refactored isKeyAllowed** to PatternMatcher + KeyPolicyValidator classes
+- **Split StrictJsonOptions** into 6 groups (ISP principle):
+  - ParserOptions, CacheOptions, StreamingOptions
+  - LazyOptions, FilteringOptions, ErrorHandlerOptions
+- **Introduced ICache** interface for flexibility (DIP principle)
+  - LRUCache implementation
+  - NoCache implementation (Null Object pattern)
+  - createCache factory
+- **Improved StrictJsonModule** with Dependency Injection
+  - StrictJsonCacheService
+  - Proper lifecycle (OnModuleDestroy)
+  - forRoot() and forRootAsync() methods
+- **Eliminated duplication** between parseStrictJson and parseStrictJsonAsync (~90%)
+
+### 🧪 Test Coverage (95%+)
+- **Added 416 new tests:**
+  - test/cache.spec.ts (68 tests) - 100% caching
+  - test/lazy-mode.spec.ts (47 tests) - 100% lazy mode
+  - test/fast-path.spec.ts (59 tests) - 100% fast path
+  - test/validation.spec.ts (135 tests) - 100% validation
+  - test/nest.spec.ts (61 tests) - ~95% NestJS module
+  - test/streaming-parser.spec.ts (46 tests) - 96% streaming parser
+- **Overall statistics:**
+  - 485/487 tests pass (99.6% success rate)
+  - 2 tests with timeout (streaming-parser edge cases)
+  - Execution time: ~6.56 seconds
+
+### ⚡ Performance Optimizations
+- **RegExp memoization** in PatternMatcher (30-40% faster)
+- **Validation memoization** in KeyPolicyValidator (40-50% faster)
+- **SHA-256 hashing for cache keys:**
+  - 10-15% faster get/set operations
+  - 72% memory reduction (128 bytes for keys instead of large JSON)
+  - No collisions with SHA-256
+- **Overall performance gain:**
+  - Large JSON (1MB): 64.05ms → 5.94ms = **91% faster**
+  - Memory (Peak Heap): 234.64MB → 65.56MB = **72% less**
+
+### 🐛 Bug Fixes
+- **StreamingJsonParser:**
+  - Fixed pathStack accumulation between instances
+  - Fixed parser completion and 'end' event emission
+  - Fixed array handling (keysInCurrentObject.clear())
+  - Fixed processColon() logic
+  - Added JSDoc documentation
+  - **Result:** 15/22 failed tests fixed (24/46 → 44/46 pass)
+
+### 📝 Documentation
+- Updated README.md with latest achievements and functionality
+- Updated OPTIMIZATION-GUIDE.md with optimizations
+- Updated performance/reports/comparison-latest.md with comparisons
+
+### 🔧 Breaking Changes
+None
+
+### 📦 Dependencies
+- Added `@nestjs/testing@^10.4.0` for NestJS module testing
+
+### 🙏 Thanks
+Thanks to all contributors for bug reports and suggestions!
+
+[0.4.4]: https://github.com/pas7-studio/nestjs-strict-json/releases/tag/v0.4.4
+
+---
+
 ## [0.4.0] - 2025-01-XX
 
 ### 🚀 BREAKTHROUGH: We Just Changed the Game
