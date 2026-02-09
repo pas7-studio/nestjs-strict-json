@@ -166,7 +166,7 @@ export class StreamingJsonParser extends Transform {
   /**
    * Processes the JSON buffer character by character.
    * Maintains parsing state and detects structural errors.
-   * 
+   *
    * This is the core parsing method that iterates through the buffer,
    * handling different JSON tokens and updating the parser state accordingly.
    * It manages the following states:
@@ -177,7 +177,7 @@ export class StreamingJsonParser extends Transform {
    * - keysInCurrentObject: tracks keys in the current object scope
    * - pathStack: maintains the current JSON path (e.g., ['$', 'user', 'name'])
    * - completed: true when parsing has completed
-   * 
+   *
    * The method also handles memory efficiency by keeping only the last incomplete
    * chunk in the buffer for the next iteration.
    */
@@ -244,15 +244,9 @@ export class StreamingJsonParser extends Transform {
             this.state.arrayDepth++;
             this.state.inArray = true;
             this.state.expectingKey = false; // In arrays, expect values, not keys
-            // Clear keys when entering an array within an object
-            // to prepare for new object elements
-            if (this.state.inObject) {
-              this.state.keysInCurrentObject.clear();
-            } else if (this.state.arrayDepth === 1) {
-              // Entering an array at root level - clear keys
-              // This handles cases like: { "data": [1,2], "data": [3,4] }
-              this.state.keysInCurrentObject.clear();
-            }
+            // Note: We do NOT clear keys when entering/exiting arrays.
+            // Arrays are just values for keys, they don't start a new object scope.
+            // Keys should only be cleared when entering a new object.
             break;
 
           case ']':
@@ -260,10 +254,10 @@ export class StreamingJsonParser extends Transform {
               this.state.arrayDepth--;
               // Reset inArray flag if we've exited all arrays
               this.state.inArray = this.state.arrayDepth > 0;
-              // Clear keys when exiting an array
-              this.state.keysInCurrentObject.clear();
               // After ']', expect a key if in an object (at any object level), false otherwise
               this.state.expectingKey = this.state.inObject;
+              // Note: We do NOT clear keys when exiting arrays.
+              // Keys should only be cleared when exiting an object.
               // Check if we've returned to root level
               if (this.state.objectDepth === 0 && this.state.arrayDepth === 0) {
                 this.state.completed = true;
@@ -280,6 +274,25 @@ export class StreamingJsonParser extends Transform {
             this.state.expectingKey = this.state.inObject;
             // Reset current key for the next key-value pair
             this.state.currentKey = '';
+            break;
+
+          // Add validation for invalid characters
+          case ' ':
+          case '\t':
+          case '\n':
+          case '\r':
+            // Skip whitespace
+            break;
+
+          default:
+            // If we're not in a string and not expecting a value, this is invalid
+            if (!this.state.inString && !this.state.expectingKey && this.state.objectDepth === 0 && this.state.arrayDepth === 0) {
+              throw new Error('Incomplete JSON');
+            }
+            // Also check if it's an invalid character in current context
+            if (!this.state.inString && this.state.expectingKey && this.state.inObject && char !== '"' && !this.isValidPrimitive(char)) {
+              throw new Error('Incomplete JSON');
+            }
             break;
         }
       }
@@ -303,6 +316,13 @@ export class StreamingJsonParser extends Transform {
     } else {
       this.state.buffer = '';
     }
+  }
+
+  /**
+   * Checks if a character is the start of a primitive value (number, boolean, null).
+   */
+  private isValidPrimitive(char: string): boolean {
+    return /[0-9\-+tfn]/.test(char);
   }
 
   /**

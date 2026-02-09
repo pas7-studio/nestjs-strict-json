@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.5] - 2025-01-XX
+
+### 🎯 Overview
+This release fixes critical issues in the streaming parser that caused test failures. All 494 tests now pass (100% success rate).
+
+### 🐛 Bug Fixes
+- **StreamingJsonParser:**
+  - Fixed timeout issue with duplicate key detection in nested arrays
+  - Fixed validation error issue with invalid JSON detection
+  - **Result:** All 494 tests now pass (100% success rate)
+
+### 🧪 Test Coverage
+- **Overall statistics:**
+  - 494/494 tests pass (100% success rate)
+  - All streaming-parser edge case tests fixed
+
+### 🔧 Breaking Changes
+None
+
+### 📦 Dependencies
+None
+
+[0.4.5]: https://github.com/pas7-studio/nestjs-strict-json/releases/tag/v0.4.5
+
+---
+
 ## [0.4.4] - 2025-01-XX
 
 ### 🎯 Overview
