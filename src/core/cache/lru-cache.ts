@@ -80,8 +80,8 @@ export class LRUCache<K = string, V = unknown> implements ICache<K, V> {
    *
    * @param key - Ключ для збереження значення
    * @param value - Значення для збереження в кеші
-   * @param ttl - Опціональний час життя запису в мілісекундах.
-   *              Якщо не вказано, використовується default TTL кешу
+   * @param _ttl - Опціональний параметр (використовується для сумісності з інтерфейсом)
+   *               Зараз ігнорується, всі записи використовують глобальний TTL кешу
    *
    * @example
    * ```typescript
@@ -92,7 +92,7 @@ export class LRUCache<K = string, V = unknown> implements ICache<K, V> {
    * cache.set('temp-key', tempData, 5000);
    * ```
    */
-  set(key: K, value: V, ttl?: number): void {
+  set(key: K, value: V, _ttl?: number): void {
     // Видаляємо найстаріший запис при досягненні ємності
     if (this.cache.size >= this._maxSize) {
       const firstKey = this.cache.keys().next().value;
