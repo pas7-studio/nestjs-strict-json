@@ -1,6 +1,6 @@
 {
   "name": "@pas7/nestjs-strict-json",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Strict JSON parsing for NestJS (Express/Fastify) with duplicate-key detection",
   "license": "Apache-2.0",
   "repository": {
@@ -37,17 +37,17 @@
   "sideEffects": false,
   "scripts": {
     "build": "tsup",
-    "bench:parser": "bun run build && bun scripts/benchmark-parser.mjs",
-    "bench:compare": "bun run build && bun scripts/benchmark-comparison.mjs",
-    "benchmark": "bun performance/run-all-benchmarks.mjs",
-    "benchmark:parser": "bunx vitest run performance/benchmarks/parser/",
-    "benchmark:adapters": "bunx vitest run performance/benchmarks/adapters/",
-    "benchmark:comparisons": "bunx vitest run performance/benchmarks/comparisons/",
-    "benchmark:report": "bun performance/utils/generate-report.mjs",
-    "lint": "bunx eslint .",
-    "test": "bunx vitest run",
-    "test:e2e": "bunx vitest run --config vitest.e2e.config.ts",
-    "test:watch": "bunx vitest",
+    "bench:parser": "npm run build && node scripts/benchmark-parser.mjs",
+    "bench:compare": "npm run build && node scripts/benchmark-comparison.mjs",
+    "benchmark": "node performance/run-all-benchmarks.mjs",
+    "benchmark:parser": "npx vitest run performance/benchmarks/parser/",
+    "benchmark:adapters": "npx vitest run performance/benchmarks/adapters/",
+    "benchmark:comparisons": "npx vitest run performance/benchmarks/comparisons/",
+    "benchmark:report": "node performance/utils/generate-report.mjs",
+    "lint": "npx eslint .",
+    "test": "npx vitest run",
+    "test:e2e": "npx vitest run --config vitest.e2e.config.ts",
+    "test:watch": "npx vitest",
     "typecheck": "tsc -p tsconfig.build.json --noEmit"
   },
   "dependencies": {
@@ -67,7 +67,6 @@
     }
   },
   "devDependencies": {
-    "bun-types": "latest",
     "@nestjs/common": "^10.4.0",
     "@nestjs/core": "^10.4.0",
     "@nestjs/platform-express": "^10.4.0",
