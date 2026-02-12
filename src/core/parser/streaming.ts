@@ -50,7 +50,6 @@ export async function parseLargePayload(buffer: Buffer, options?: StrictJsonOpti
   return new Promise((resolve, reject) => {
     const streamingParser = new StreamingJsonParser(options);
     let hasError = false;
-    let validationPassed = false;
     
     streamingParser.on('error', (error: Error) => {
       hasError = true;
@@ -87,8 +86,6 @@ export async function parseLargePayload(buffer: Buffer, options?: StrictJsonOpti
       if (hasError) {
         return;
       }
-      
-      validationPassed = true;
       
       try {
         // Parse the JSON after validation passed

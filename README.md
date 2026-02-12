@@ -75,7 +75,7 @@ Key takeaways:
 Reproduce:
 
 ```bash
-npm run bench:compare
+bun run bench:compare
 ```
 
 ## Security Capability Comparison
@@ -101,7 +101,7 @@ npm run bench:compare
 ## Installation
 
 ```bash
-npm install @pas7/nestjs-strict-json
+bun add @pas7/nestjs-strict-json
 ```
 
 ## Quick Start
