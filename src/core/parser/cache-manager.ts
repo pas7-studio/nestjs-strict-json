@@ -7,15 +7,35 @@ import { createHash } from "crypto";
 // Global cache instance using ICache interface
 let parseCache: ICache<string, unknown> = createCache();
 
-// Cache cleanup interval (every 5 minutes)
-const cacheCleanupInterval = setInterval(() => {
-  // LRU cache automatically expires on access, but periodic cleanup
-  // prevents stale entries from hanging in memory indefinitely.
-  if (parseCache instanceof LRUCache) {
-    parseCache.pruneExpired();
-  }
-}, 5 * 60 * 1000);
-cacheCleanupInterval.unref();
+// Cache cleanup interval reference (null when not running)
+let cacheCleanupInterval: NodeJS.Timeout | null = null;
+
+/**
+ * Starts the cache cleanup interval if not already running.
+ * The interval runs every 5 minutes to prune expired entries from LRU cache.
+ * 
+ * This function is called automatically when the module is loaded.
+ * It's safe to call multiple times - subsequent calls are no-ops.
+ * 
+ * @internal
+ */
+function startCleanupInterval(): void {
+  if (cacheCleanupInterval) return;
+  
+  cacheCleanupInterval = setInterval(() => {
+    // LRU cache automatically expires on access, but periodic cleanup
+    // prevents stale entries from hanging in memory indefinitely.
+    if (parseCache instanceof LRUCache) {
+      parseCache.pruneExpired();
+    }
+  }, 5 * 60 * 1000);
+  
+  // Allow the process to exit even if this interval is still running
+  cacheCleanupInterval.unref();
+}
+
+// Auto-start cleanup interval on module load
+startCleanupInterval();
 
 /**
  * Clears all entries from the parse cache.
@@ -30,6 +50,95 @@ export function clearParseCache(): void {
  */
 export function getParseCacheSize(): number {
   return parseCache.size;
+}
+
+/**
+ * Checks if the cleanup interval is currently running.
+ * Useful for testing and debugging.
+ * 
+ * @returns `true` if the cleanup interval is active, `false` otherwise
+ * 
+ * @example
+ * ```ts
+ * if (isCleanupIntervalRunning()) {
+ *   console.log('Cleanup interval is active');
+ * }
+ * ```
+ */
+export function isCleanupIntervalRunning(): boolean {
+  return cacheCleanupInterval !== null;
+}
+
+/**
+ * Gracefully shuts down the cache manager.
+ * 
+ * This function stops the cleanup interval and clears all cache entries.
+ * Use this for graceful shutdown scenarios, such as:
+ * - Application shutdown
+ * - Test teardown
+ * - Worker termination
+ * 
+ * After calling this function, the cache will be empty and the cleanup
+ * interval will be stopped. You can restart it by calling `resetCacheManager()`
+ * or it will auto-restart on next module import.
+ * 
+ * @example
+ * ```ts
+ * // In application shutdown hook
+ * process.on('SIGTERM', () => {
+ *   shutdownCacheManager();
+ *   process.exit(0);
+ * });
+ * ```
+ * 
+ * // In test teardown
+ * afterEach(() => {
+ *   shutdownCacheManager();
+ * });
+ * ```
+ */
+export function shutdownCacheManager(): void {
+  if (cacheCleanupInterval) {
+    clearInterval(cacheCleanupInterval);
+    cacheCleanupInterval = null;
+  }
+  clearParseCache();
+}
+
+/**
+ * Resets the cache manager to its initial state.
+ * 
+ * This function performs a complete reset:
+ * 1. Stops the cleanup interval (if running)
+ * 2. Creates a fresh cache instance
+ * 3. Restarts the cleanup interval
+ * 
+ * Use this primarily in testing scenarios to ensure isolation between tests.
+ * 
+ * @example
+ * ```ts
+ * // In test setup
+ * beforeEach(() => {
+ *   resetCacheManager();
+ * });
+ * 
+ * // Verify clean state
+ * expect(getParseCacheSize()).toBe(0);
+ * expect(isCleanupIntervalRunning()).toBe(true);
+ * ```
+ */
+export function resetCacheManager(): void {
+  // Stop existing interval
+  if (cacheCleanupInterval) {
+    clearInterval(cacheCleanupInterval);
+    cacheCleanupInterval = null;
+  }
+  
+  // Create fresh cache instance
+  parseCache = createCache();
+  
+  // Restart cleanup interval
+  startCleanupInterval();
 }
 
 /**

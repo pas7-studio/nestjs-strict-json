@@ -1,5 +1,7 @@
 import type { StrictJsonOptions } from "../types.js";
 import { StreamingJsonParser } from "../streaming-parser.js";
+import { DuplicateKeyError, InvalidJsonError } from "../errors.js";
+import { invokeErrorHandlerSync } from "./error-handler.js";
 
 /**
  * Determines whether streaming should be used for parsing a payload.
@@ -32,33 +34,79 @@ export function shouldUseStreamingForPayload(
  * This function is designed for handling large JSON payloads efficiently
  * by processing them in chunks rather than loading the entire string into memory.
  *
+ * The streaming parser validates the JSON structure including:
+ * - Duplicate key detection
+ * - Prototype pollution protection
+ * - Depth limit validation
+ *
  * @param buffer - The buffer containing the JSON data
  * @param options - Strict JSON parsing options
  * @returns A promise that resolves to the parsed JSON object
- * @throws {Error} When parsing fails
+ * @throws {DuplicateKeyError} When duplicate keys are detected
+ * @throws {InvalidJsonError} When JSON is malformed
+ * @throws {Error} When other parsing errors occur
  */
 export async function parseLargePayload(buffer: Buffer, options?: StrictJsonOptions): Promise<unknown> {
   return new Promise((resolve, reject) => {
     const streamingParser = new StreamingJsonParser(options);
+    let hasError = false;
+    let validationPassed = false;
     
-    streamingParser.on('data', (data) => {
-      resolve(data);
-    });
-    
-    streamingParser.on('error', (error) => {
-      reject(error);
+    streamingParser.on('error', (error: Error) => {
+      hasError = true;
+      
+      // Transform generic errors into specific StrictJsonError types
+      let strictError: Error = error;
+      
+      // Check for duplicate key error from streaming parser
+      if (error.message.includes("Duplicate key '")) {
+        // Extract key and path from error message
+        const match = error.message.match(/Duplicate key '([^']+)' at (.+)/);
+        if (match) {
+          const key = match[1];
+          const path = match[2];
+          strictError = new DuplicateKeyError(path, key);
+          // Invoke custom error handler if provided
+          invokeErrorHandlerSync(options?.onDuplicateKey, strictError);
+        }
+      } else if (error.message.includes('Incomplete JSON')) {
+        strictError = new InvalidJsonError(error.message);
+        invokeErrorHandlerSync(options?.onInvalidJson, strictError);
+      } else if (error.message.includes('Prototype pollution detected')) {
+        invokeErrorHandlerSync(options?.onPrototypePollution, strictError);
+      }
+      
+      // Invoke generic error handler if provided and no specific handler was called
+      invokeErrorHandlerSync(options?.onError, strictError);
+      
+      reject(strictError);
     });
     
     streamingParser.on('end', () => {
+      // Skip if error already occurred
+      if (hasError) {
+        return;
+      }
+      
+      validationPassed = true;
+      
       try {
+        // Parse the JSON after validation passed
         const jsonStr = buffer.toString('utf-8');
         const parsed = JSON.parse(jsonStr);
         resolve(parsed);
       } catch (error) {
-        reject(error);
+        // JSON.parse failed - this shouldn't happen if validation passed
+        // but handle it gracefully
+        const parseError = error instanceof Error 
+          ? new InvalidJsonError(error.message)
+          : new InvalidJsonError('Failed to parse JSON');
+        invokeErrorHandlerSync(options?.onInvalidJson, parseError);
+        reject(parseError);
       }
     });
     
+    // Write the buffer to the parser
     streamingParser.write(buffer);
     streamingParser.end();
   });

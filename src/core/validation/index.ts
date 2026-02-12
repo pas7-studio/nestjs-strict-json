@@ -14,11 +14,130 @@ import { PatternMatcher } from './pattern-matcher.js';
 export { KeyPolicyValidator } from './key-policy-validator.js';
 export { PatternMatcher } from './pattern-matcher.js';
 
+// ============================================================================
+// Validator Cache Implementation
+// ============================================================================
+
+/**
+ * Максимальний розмір кешу валідаторів
+ * Обмежує кількість кешованих конфігурацій для уникнення memory leaks
+ */
+const MAX_CACHE_SIZE = 100;
+
+/**
+ * Кеш валідаторів для оптимізації продуктивності
+ * Зберігає екземпляри KeyPolicyValidator за хешем конфігурації
+ */
+const validatorCache = new Map<string, KeyPolicyValidator>();
+
+/**
+ * Генерує унікальний хеш для конфігурації валідатора
+ * 
+ * @param whitelist - Масив whitelist патернів
+ * @param blacklist - Масив blacklist патернів
+ * @param ignoreCase - Чи ігнорувати регістр
+ * @returns Унікальний рядок-хеш для конфігурації
+ * 
+ * @internal
+ */
+function getConfigHash(
+  whitelist?: string[],
+  blacklist?: string[],
+  ignoreCase?: boolean
+): string {
+  // Сортуємо масиви для консистентного хешування
+  const sortedWhitelist = whitelist ? [...whitelist].sort() : undefined;
+  const sortedBlacklist = blacklist ? [...blacklist].sort() : undefined;
+  
+  return JSON.stringify({
+    whitelist: sortedWhitelist,
+    blacklist: sortedBlacklist,
+    ignoreCase
+  });
+}
+
+/**
+ * Отримує або створює кешований валідатор
+ * 
+ * Ця функція реалізує патерн pooling для валідаторів,
+ * що дозволяє уникнути повторного створення об'єктів та
+ * повторної компіляції regex патернів.
+ * 
+ * @param whitelist - Масив glob патернів для whitelist (опціонально)
+ * @param blacklist - Масив glob патернів для blacklist (опціонально)
+ * @param ignoreCase - Чи ігнорувати регістр при порівнянні (за замовчуванням false)
+ * @returns Кешований екземпляр KeyPolicyValidator
+ * 
+ * @example
+ * ```typescript
+ * // Отримати кешований валідатор
+ * const validator1 = getCachedValidator(['user.*'], ['*.password']);
+ * const validator2 = getCachedValidator(['user.*'], ['*.password']);
+ * console.log(validator1 === validator2); // true (той самий екземпляр)
+ * ```
+ */
+export function getCachedValidator(
+  whitelist?: string[],
+  blacklist?: string[],
+  ignoreCase: boolean = false
+): KeyPolicyValidator {
+  const hash = getConfigHash(whitelist, blacklist, ignoreCase);
+  
+  let validator = validatorCache.get(hash);
+  
+  if (!validator) {
+    // Створюємо новий валідатор якщо немає в кеші
+    validator = new KeyPolicyValidator(whitelist, blacklist, ignoreCase);
+    
+    // Перевіряємо розмір кешу перед додаванням
+    if (validatorCache.size >= MAX_CACHE_SIZE) {
+      // Видаляємо найстаріший запис (перший в Map)
+      const oldestKey = validatorCache.keys().next().value;
+      if (oldestKey) {
+        validatorCache.delete(oldestKey);
+      }
+    }
+    
+    validatorCache.set(hash, validator);
+  }
+  
+  return validator;
+}
+
+/**
+ * Очищає кеш валідаторів
+ * 
+ * Корисно для тестування або при зміні конфігурації
+ * 
+ * @example
+ * ```typescript
+ * // Очистити кеш перед тестами
+ * clearValidatorCache();
+ * ```
+ */
+export function clearValidatorCache(): void {
+  validatorCache.clear();
+}
+
+/**
+ * Отримує поточний розмір кешу валідаторів
+ * 
+ * @returns Кількість кешованих валідаторів
+ * 
+ * @example
+ * ```typescript
+ * console.log(getValidatorCacheSize()); // 5
+ * ```
+ */
+export function getValidatorCacheSize(): number {
+  return validatorCache.size;
+}
+
 /**
  * Перевіряє чи дозволений ключ на основі whitelist та blacklist
  * 
  * Ця функція забезпечує зворотну сумісність з оригінальною реалізацією
- * isKeyAllowed. Вона використовує KeyPolicyValidator для виконання валідації.
+ * isKeyAllowed. Вона використовує кешований KeyPolicyValidator для виконання валідації.
  * 
  * @param key - Ключ для перевірки (наприклад, "$.user" або "$.data.name")
  * @param whitelist - Масив glob патернів (опціонально, наприклад, "user" або "data.*")
@@ -69,6 +188,7 @@ export { PatternMatcher } from './pattern-matcher.js';
  * 
  * @see {@link KeyPolicyValidator} - Клас для більш складних сценаріїв валідації
  * @see {@link PatternMatcher} - Клас для патерн-матчингу
+ * @see {@link getCachedValidator} - Функція для отримання кешованого валідатора
  */
 export function isKeyAllowed(
   key: string,
@@ -76,7 +196,7 @@ export function isKeyAllowed(
   blacklist?: string[],
   ignoreCase: boolean = false
 ): boolean {
-  const validator = new KeyPolicyValidator(whitelist, blacklist, ignoreCase);
+  const validator = getCachedValidator(whitelist, blacklist, ignoreCase);
   return validator.isKeyAllowed(key);
 }
 

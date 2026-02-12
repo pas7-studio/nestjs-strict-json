@@ -4,6 +4,8 @@ import {
   StreamingJsonParser,
   shouldUseStreaming,
 } from '../src/core/streaming-parser.js';
+import { parseLargePayload, shouldUseStreamingForPayload } from '../src/core/parser/streaming.js';
+import { DuplicateKeyError, InvalidJsonError } from '../src/core/errors.js';
 import type { StrictJsonOptions } from '../src/core/types.js';
 
 describe('StreamingJsonParser', () => {
@@ -681,5 +683,336 @@ describe('shouldUseStreaming', () => {
       streamingThreshold: 500000,
     });
     expect(result).toBe(true);
+  });
+});
+
+describe('shouldUseStreamingForPayload', () => {
+  it('should return false when enableStreaming is false', () => {
+    const buffer = Buffer.from('{"test":1}');
+    const result = shouldUseStreamingForPayload(buffer, { enableStreaming: false });
+    expect(result).toBe(false);
+  });
+
+  it('should return true when buffer size exceeds threshold', () => {
+    const largeBuffer = Buffer.alloc(200 * 1024); // 200KB
+    const result = shouldUseStreamingForPayload(largeBuffer, {
+      enableStreaming: true,
+      streamingThreshold: 100 * 1024,
+    });
+    expect(result).toBe(true);
+  });
+
+  it('should return false when buffer size is below threshold', () => {
+    const smallBuffer = Buffer.from('{"test":1}');
+    const result = shouldUseStreamingForPayload(smallBuffer, {
+      enableStreaming: true,
+      streamingThreshold: 100 * 1024,
+    });
+    expect(result).toBe(false);
+  });
+
+  it('should use default threshold of 100KB when not specified', () => {
+    const largeBuffer = Buffer.alloc(150 * 1024); // 150KB
+    const result = shouldUseStreamingForPayload(largeBuffer, { enableStreaming: true });
+    expect(result).toBe(true);
+  });
+
+  it('should return false when options are not provided', () => {
+    const buffer = Buffer.from('{"test":1}');
+    const result = shouldUseStreamingForPayload(buffer);
+    expect(result).toBe(false);
+  });
+
+  it('should handle exact threshold match', () => {
+    const buffer = Buffer.alloc(100 * 1024); // exactly 100KB
+    const result = shouldUseStreamingForPayload(buffer, {
+      enableStreaming: true,
+      streamingThreshold: 100 * 1024,
+    });
+    expect(result).toBe(true);
+  });
+});
+
+describe('parseLargePayload', () => {
+  // ========== Valid JSON tests ==========
+  describe('Valid JSON parsing', () => {
+    it('should parse valid object', async () => {
+      const json = '{"name":"John","age":30}';
+      const buffer = Buffer.from(json);
+      
+      const result = await parseLargePayload(buffer);
+      
+      expect(result).toEqual({ name: 'John', age: 30 });
+    });
+
+    it('should parse valid array', async () => {
+      const json = '[1,2,3,4,5]';
+      const buffer = Buffer.from(json);
+      
+      const result = await parseLargePayload(buffer);
+      
+      expect(result).toEqual([1, 2, 3, 4, 5]);
+    });
+
+    it('should parse nested objects', async () => {
+      const json = '{"user":{"name":"John","address":{"city":"NYC"}}}';
+      const buffer = Buffer.from(json);
+      
+      const result = await parseLargePayload(buffer);
+      
+      expect(result).toEqual({
+        user: {
+          name: 'John',
+          address: { city: 'NYC' }
+        }
+      });
+    });
+
+    it('should parse empty object', async () => {
+      const json = '{}';
+      const buffer = Buffer.from(json);
+      
+      const result = await parseLargePayload(buffer);
+      
+      expect(result).toEqual({});
+    });
+
+    it('should parse empty array', async () => {
+      const json = '[]';
+      const buffer = Buffer.from(json);
+      
+      const result = await parseLargePayload(buffer);
+      
+      expect(result).toEqual([]);
+    });
+
+    it('should parse large valid payload', async () => {
+      // Create a large object
+      const largeObj: Record<string, unknown> = {};
+      for (let i = 0; i < 1000; i++) {
+        largeObj[`key${i}`] = `value${i}`;
+      }
+      const json = JSON.stringify(largeObj);
+      const buffer = Buffer.from(json);
+      
+      const result = await parseLargePayload(buffer);
+      
+      expect(result).toEqual(largeObj);
+    });
+  });
+
+  // ========== Duplicate key detection tests ==========
+  describe('Duplicate key detection', () => {
+    it('should throw DuplicateKeyError for duplicate keys at root level', async () => {
+      const json = '{"name":"John","name":"Jane"}';
+      const buffer = Buffer.from(json);
+      
+      await expect(parseLargePayload(buffer)).rejects.toThrow(DuplicateKeyError);
+    });
+
+    it('should include key name in error message', async () => {
+      const json = '{"name":"John","name":"Jane"}';
+      const buffer = Buffer.from(json);
+      
+      try {
+        await parseLargePayload(buffer);
+        expect.fail('Should have thrown');
+      } catch (error) {
+        expect(error).toBeInstanceOf(DuplicateKeyError);
+        expect((error as DuplicateKeyError).details.key).toBe('name');
+      }
+    });
+
+    it('should detect duplicate keys in nested objects', async () => {
+      const json = '{"user":{"name":"John","name":"Jane"}}';
+      const buffer = Buffer.from(json);
+      
+      await expect(parseLargePayload(buffer)).rejects.toThrow(DuplicateKeyError);
+    });
+
+    it('should detect duplicate keys in arrays of objects', async () => {
+      const json = '[{"id":1,"id":2}]';
+      const buffer = Buffer.from(json);
+      
+      await expect(parseLargePayload(buffer)).rejects.toThrow(DuplicateKeyError);
+    });
+
+    it('should detect duplicate in deeply nested structure', async () => {
+      const json = '{"a":{"b":{"c":{"d":1,"d":2}}}}';
+      const buffer = Buffer.from(json);
+      
+      await expect(parseLargePayload(buffer)).rejects.toThrow(DuplicateKeyError);
+    });
+
+    it('should detect duplicate at root with nested arrays', async () => {
+      const json = '{"data":[1,2,3],"data":[4,5,6]}';
+      const buffer = Buffer.from(json);
+      
+      await expect(parseLargePayload(buffer)).rejects.toThrow(DuplicateKeyError);
+    });
+
+    it('should allow same keys in different sibling objects', async () => {
+      const json = '{"user1":{"name":"John"},"user2":{"name":"Jane"}}';
+      const buffer = Buffer.from(json);
+      
+      const result = await parseLargePayload(buffer);
+      
+      expect(result).toEqual({
+        user1: { name: 'John' },
+        user2: { name: 'Jane' }
+      });
+    });
+
+    it('should allow same keys in different array elements', async () => {
+      const json = '[{"id":1},{"id":2}]';
+      const buffer = Buffer.from(json);
+      
+      const result = await parseLargePayload(buffer);
+      
+      expect(result).toEqual([{ id: 1 }, { id: 2 }]);
+    });
+  });
+
+  // ========== Edge Cases: Buffer boundary tests ==========
+  describe('Edge cases: Buffer boundaries', () => {
+    it('should detect duplicate when key spans potential buffer boundary', async () => {
+      // Simulate a case where duplicate might be split across buffer processing
+      const json = '{"name":"John","name":"Jane"}';
+      const buffer = Buffer.from(json);
+      
+      await expect(parseLargePayload(buffer)).rejects.toThrow(DuplicateKeyError);
+    });
+
+    it('should detect duplicate with long values before second key', async () => {
+      // Long value to test buffer handling
+      const longValue = 'x'.repeat(1000);
+      const json = `{"name":"${longValue}","name":"Jane"}`;
+      const buffer = Buffer.from(json);
+      
+      await expect(parseLargePayload(buffer)).rejects.toThrow(DuplicateKeyError);
+    });
+
+    it('should detect duplicate with nested objects and arrays mix', async () => {
+      const json = '{"items":[{"name":"a"},{"name":"b"}],"items":[]}';
+      const buffer = Buffer.from(json);
+      
+      await expect(parseLargePayload(buffer)).rejects.toThrow(DuplicateKeyError);
+    });
+
+    it('should handle deeply nested duplicates', async () => {
+      const json = '{"l1":{"l2":{"l3":{"l4":{"dup":1,"dup":2}}}}}';
+      const buffer = Buffer.from(json);
+      
+      await expect(parseLargePayload(buffer)).rejects.toThrow(DuplicateKeyError);
+    });
+  });
+
+  // ========== Invalid JSON tests ==========
+  describe('Invalid JSON handling', () => {
+    it('should throw InvalidJsonError for incomplete JSON', async () => {
+      const json = '{"name":"John"';
+      const buffer = Buffer.from(json);
+      
+      await expect(parseLargePayload(buffer)).rejects.toThrow();
+    });
+
+    it('should throw error for malformed JSON', async () => {
+      const json = '{invalid json}';
+      const buffer = Buffer.from(json);
+      
+      await expect(parseLargePayload(buffer)).rejects.toThrow();
+    });
+
+    it('should throw error for unclosed array', async () => {
+      const json = '[1,2,3';
+      const buffer = Buffer.from(json);
+      
+      await expect(parseLargePayload(buffer)).rejects.toThrow();
+    });
+  });
+
+  // ========== Prototype pollution tests ==========
+  describe('Prototype pollution protection', () => {
+    it('should block __proto__ key', async () => {
+      const json = '{"__proto__":{"polluted":true}}';
+      const buffer = Buffer.from(json);
+      
+      await expect(parseLargePayload(buffer)).rejects.toThrow();
+    });
+
+    it('should block constructor key', async () => {
+      const json = '{"constructor":{"polluted":true}}';
+      const buffer = Buffer.from(json);
+      
+      await expect(parseLargePayload(buffer)).rejects.toThrow();
+    });
+
+    it('should block prototype key', async () => {
+      const json = '{"prototype":{"polluted":true}}';
+      const buffer = Buffer.from(json);
+      
+      await expect(parseLargePayload(buffer)).rejects.toThrow();
+    });
+  });
+
+  // ========== Custom error handler tests ==========
+  describe('Custom error handlers', () => {
+    it('should call onDuplicateKey handler when duplicate is found', async () => {
+      const json = '{"name":"John","name":"Jane"}';
+      const buffer = Buffer.from(json);
+      
+      let handlerCalled = false;
+      let capturedError: Error | null = null;
+      
+      const options: StrictJsonOptions = {
+        onDuplicateKey: (error) => {
+          handlerCalled = true;
+          capturedError = error as Error;
+        }
+      };
+      
+      await expect(parseLargePayload(buffer, options)).rejects.toThrow();
+      
+      expect(handlerCalled).toBe(true);
+      expect(capturedError).toBeInstanceOf(DuplicateKeyError);
+    });
+
+    it('should call onInvalidJson handler for invalid JSON', async () => {
+      const json = '{"name":"John"';
+      const buffer = Buffer.from(json);
+      
+      let handlerCalled = false;
+      let capturedError: Error | null = null;
+      
+      const options: StrictJsonOptions = {
+        onInvalidJson: (error) => {
+          handlerCalled = true;
+          capturedError = error as Error;
+        }
+      };
+      
+      await expect(parseLargePayload(buffer, options)).rejects.toThrow();
+      
+      expect(handlerCalled).toBe(true);
+    });
+
+    it('should call onError handler for any error', async () => {
+      const json = '{"name":"John","name":"Jane"}';
+      const buffer = Buffer.from(json);
+      
+      let handlerCalled = false;
+      let capturedError: Error | null = null;
+      
+      const options: StrictJsonOptions = {
+        onError: (error) => {
+          handlerCalled = true;
+          capturedError = error as Error;
+        }
+      };
+      
+      await expect(parseLargePayload(buffer, options)).rejects.toThrow();
+      
+      expect(handlerCalled).toBe(true);
+    });
   });
 });

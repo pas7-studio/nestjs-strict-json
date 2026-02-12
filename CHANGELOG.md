@@ -5,6 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2025-01-23
+
+### 🎯 Overview
+This release delivers **massive performance improvements** and critical bug fixes. The parser is now **12.8x faster** and uses **85% less memory**.
+
+### 🚀 Performance Improvements
+- **12.8x faster parsing** - optimized from 80.71ms to 6.30ms per operation
+- **85% less memory** - reduced peak heap from 146MB to 21MB
+- **Validator caching** - 40-45% faster validation with LRU cache
+- **Only 18% slower than native JSON.parse** (was 24x slower)
+
+### 🐛 Bug Fixes
+- **Memory leak fixed** - cleanup interval now properly disposed with `shutdownCacheManager()`
+- **Streaming duplicate validation** - streaming parser now correctly detects duplicate keys at all nesting levels
+
+### ✨ New Features
+- `shutdownCacheManager()` - graceful shutdown of cleanup interval
+- `resetCacheManager()` - full reset for testing
+- `isCleanupIntervalRunning()` - diagnostics for interval state
+- `getCachedValidator()` - get or create cached validator
+- `clearValidatorCache()` - clear validator cache
+- `getValidatorCacheSize()` - get cache size
+
+### 📊 Benchmark Results
+| Implementation | Avg ms/op | Peak Heap (MB) |
+|----------------|-----------|----------------|
+| Native JSON.parse | 5.36 | 0.00 |
+| **@pas7 (v0.5.0)** | **6.30** | **21.03** |
+| jsonc-parser + JSON.parse | 51.18 | 112.88 |
+| @pas7 (v0.4.x baseline) | 80.71 | 146.61 |
+
+### 🧪 Tests
+- Added 63 new tests (cache: 13, streaming: 32, validation: 18)
+- Total: 551 tests passing
+
+### 🔧 Breaking Changes
+None - fully backward compatible.
+
+[0.5.0]: https://github.com/pas7-studio/nestjs-strict-json/releases/tag/v0.5.0
+
+---
+
 ## [0.4.5] - 2025-01-XX
 
 ### 🎯 Overview

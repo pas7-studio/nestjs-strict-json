@@ -1,4 +1,12 @@
-export { parseStrictJson, parseStrictJsonAsync, clearParseCache, getParseCacheSize } from "./core/parser.js";
+export { 
+  parseStrictJson, 
+  parseStrictJsonAsync, 
+  clearParseCache, 
+  getParseCacheSize,
+  shutdownCacheManager,
+  resetCacheManager,
+  isCleanupIntervalRunning,
+} from "./core/parser.js";
 export {
   StreamingJsonParser,
   parseJsonStream,
@@ -27,6 +35,9 @@ export {
   PatternMatcher,
   createKeyPolicyValidator,
   createPatternMatcher,
+  getCachedValidator,
+  clearValidatorCache,
+  getValidatorCacheSize,
 } from "./core/validation/index.js";
 
 export { registerStrictJson } from "./nest/register.js";

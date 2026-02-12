@@ -1,41 +1,41 @@
 {
-  "generatedAt": "2026-02-09T20:40:57.198Z",
+  "generatedAt": "2026-02-12T21:55:51.571Z",
   "payload": {
     "users": 10000,
     "approximateSizeMb": 1.24
   },
   "notes": {
     "node": "v24.6.0",
-    "gcExposed": true
+    "gcExposed": false
   },
   "results": [
     {
       "name": "Native JSON.parse",
       "iterations": 80,
-      "avgMs": 3.3041150000000004,
-      "peakHeapDeltaMb": 9.5330810546875,
-      "retainedHeapMb": -0.1427764892578125
+      "avgMs": 5.364643750000001,
+      "peakHeapDeltaMb": 0,
+      "retainedHeapMb": 7.3363037109375
     },
     {
       "name": "jsonc-parser + JSON.parse",
       "iterations": 25,
-      "avgMs": 22.499467999999997,
-      "peakHeapDeltaMb": 49.266998291015625,
-      "retainedHeapMb": 0.0033416748046875
+      "avgMs": 51.182688,
+      "peakHeapDeltaMb": 112.8807601928711,
+      "retainedHeapMb": -18.313453674316406
     },
     {
       "name": "@pas7 strict (baseline)",
       "iterations": 35,
-      "avgMs": 64.04926571428572,
-      "peakHeapDeltaMb": 234.63909149169922,
-      "retainedHeapMb": 0.016937255859375
+      "avgMs": 80.7089285714286,
+      "peakHeapDeltaMb": 146.60690307617188,
+      "retainedHeapMb": 52.254737854003906
     },
     {
       "name": "@pas7 strict (optimized)",
       "iterations": 140,
-      "avgMs": 5.937181428571427,
-      "peakHeapDeltaMb": 65.55767822265625,
-      "retainedHeapMb": -0.01810455322265625
+      "avgMs": 6.303903571428574,
+      "peakHeapDeltaMb": 21.028770446777344,
+      "retainedHeapMb": -187.2666778564453
     }
   ]
 }

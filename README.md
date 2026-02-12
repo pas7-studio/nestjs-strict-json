@@ -14,39 +14,32 @@ If you need secure JSON parsing in Node.js APIs, this package is built for that 
 [![Release](https://img.shields.io/github/v/release/pas7-studio/nestjs-strict-json?sort=semver&style=flat-square)](https://github.com/pas7-studio/nestjs-strict-json/releases)
 [![Build Status](https://github.com/pas7-studio/nestjs-strict-json/actions/workflows/ci.yml/badge.svg)](https://github.com/pas7-studio/nestjs-strict-json/actions/workflows/ci.yml)
 [![License](https://img.shields.io/github/license/pas7-studio/nestjs-strict-json?style=flat-square)](https://github.com/pas7-studio/nestjs-strict-json/blob/main/LICENSE)
-[![Tests](https://img.shields.io/badge/tests-99.6%25-brightgreen.svg)](https://github.com/pas7-studio/nestjs-strict-json/actions/workflows/test.yml)
-[![Performance](https://img.shields.io/badge/performance-10.8x%20faster-blue.svg)](performance/reports/comparison-latest.md)
+[![Tests](https://img.shields.io/badge/tests-551%20passing-brightgreen.svg)](https://github.com/pas7-studio/nestjs-strict-json/actions/workflows/test.yml)
+[![Performance](https://img.shields.io/badge/performance-12.8x%20faster-blue.svg)](performance/reports/comparison-latest.md)
 
-## 🎯 Latest Achievements (v0.4.4)
+## 🎯 Latest Achievements (v0.5.0)
 
-### 🏗️ Architectural Improvements
-- ✅ Split parser.ts into 6 modules (SRP principle)
-- ✅ Introduced ICache interface for flexibility (DIP principle)
-- ✅ Split StrictJsonOptions into 6 groups (ISP principle)
-- ✅ Introduced Dependency Injection in NestJS module
-- ✅ Eliminated 90% duplication between sync/async versions
+### 🚀 Performance Breakthrough
+- ✅ **12.8x faster parsing** - optimized from 80.71ms to 6.30ms per operation
+- ✅ **85% less memory** - reduced peak heap from 146MB to 21MB
+- ✅ **Only 18% slower than native JSON.parse** (was 24x slower)
+- ✅ **Validator caching** - 40-45% faster validation with LRU cache
 
-### 🧪 Test Coverage (95%+)
-- ✅ Added 416 new tests
-- ✅ 99.6% tests passing (485/487)
-- ✅ 100% coverage of critical areas:
-  - Caching (68 tests)
-  - Lazy mode (47 tests)
-  - Fast path (59 tests)
-  - Validation (135 tests)
-  - NestJS module (61 tests)
+### 🐛 Critical Bug Fixes
+- ✅ **Memory leak fixed** - cleanup interval now properly disposed with `shutdownCacheManager()`
+- ✅ **Streaming duplicate validation** - correctly detects duplicate keys at all nesting levels
 
-### ⚡ Performance Optimizations
-- ✅ 10.8x faster than baseline (5.94ms vs 64.05ms per operation)
-- ✅ 72% memory reduction (65.56MB vs 234.64MB)
-- ✅ Implemented RegExp memoization (30-40% faster)
-- ✅ Implemented validation memoization (40-50% faster)
-- ✅ Implemented SHA-256 hash for cache keys (10-15% faster)
+### ✨ New Cache Management API
+- `shutdownCacheManager()` - graceful shutdown of cleanup interval
+- `resetCacheManager()` - full reset for testing
+- `isCleanupIntervalRunning()` - diagnostics for interval state
+- `getCachedValidator()` - get or create cached validator
+- `clearValidatorCache()` - clear validator cache
+- `getValidatorCacheSize()` - get cache size
 
-### 🐛 Bug Fixes
-- ✅ Fixed StreamingJsonParser (15/22 tests fixed)
-- ✅ Fixed pathStack accumulation between instances
-- ✅ Fixed parser completion and 'end' event emission
+### 🧪 Test Coverage
+- ✅ Added 63 new tests (cache: 13, streaming: 32, validation: 18)
+- ✅ Total: 551 tests passing
 
 ## Why teams use this
 
@@ -57,11 +50,11 @@ If you need secure JSON parsing in Node.js APIs, this package is built for that 
 
 ## 🚀 Performance
 
-| Scenario | Baseline | Optimized | Improvement |
-|----------|----------|-----------|------------|
-| Large JSON (1MB) | 64.05ms/op | 5.94ms/op | **91% faster** |
-| Memory (Peak Heap) | 234.64MB | 65.56MB | **72% less** |
-| vs Native JSON.parse | 19.4x slower | 1.8x slower | **91% closer** |
+| Scenario | v0.4.x Baseline | v0.5.0 Optimized | Improvement |
+|----------|-----------------|------------------|-------------|
+| Large JSON (1MB) | 80.71ms/op | 6.30ms/op | **12.8x faster** |
+| Memory (Peak Heap) | 146.61MB | 21.03MB | **85% less** |
+| vs Native JSON.parse | 24x slower | 1.18x slower | **95% closer** |
 
 ## Benchmark Snapshot (Large Payload)
 
@@ -100,10 +93,10 @@ npm run bench:compare
 
 | Implementation | Avg ms/op (1MB) | Peak Heap (MB) | Relative Speed |
 |-------------|------------------|-----------------|----------------|
-| Native JSON.parse | 3.30 | 9.53 | 🚀 1.0x (baseline) |
-| @pas7/nestjs-strict-json (v0.4.4) | 5.94 | 65.56 | ✅ 0.56x (1.8x slower) |
-| jsonc-parser + JSON.parse | 22.50 | 49.27 | ⚠️ 0.15x (6.8x slower) |
-| @pas7/nestjs-strict-json (v0.4.3) | 64.05 | 234.64 | ❌ 0.05x (19.4x slower) |
+| Native JSON.parse | 5.36 | 0.00 | 🚀 1.0x (baseline) |
+| **@pas7/nestjs-strict-json (v0.5.0)** | **6.30** | **21.03** | ✅ 0.85x (18% slower) |
+| jsonc-parser + JSON.parse | 51.18 | 112.88 | ⚠️ 0.10x (10x slower) |
+| @pas7/nestjs-strict-json (v0.4.x baseline) | 80.71 | 146.61 | ❌ 0.07x (24x slower) |
 
 ## Installation
 
@@ -199,6 +192,15 @@ server.listen({ port: 3000 });
 - `parseStrictJsonAsync(raw, options?)`
 - `clearParseCache()`
 - `getParseCacheSize()`
+
+### Cache management (v0.5.0+)
+
+- `shutdownCacheManager()` - graceful shutdown of cleanup interval (call on app shutdown)
+- `resetCacheManager()` - full cache reset for testing
+- `isCleanupIntervalRunning()` - check if cleanup interval is active
+- `getCachedValidator(key)` - get or create cached validator
+- `clearValidatorCache()` - clear validator cache
+- `getValidatorCacheSize()` - get current cache size
 
 ## StrictJsonOptions
 

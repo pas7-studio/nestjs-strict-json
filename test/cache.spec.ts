@@ -13,7 +13,14 @@ import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } 
 import { LRUCache, DEFAULT_CACHE_TTL, DEFAULT_CACHE_SIZE } from '../src/core/cache/lru-cache.js';
 import { NoCache } from '../src/core/cache/no-cache.js';
 import { createCache } from '../src/core/cache/cache-factory.js';
-import { clearParseCache, getParseCacheSize, buildCacheKey } from '../src/core/parser/cache-manager.js';
+import { 
+  clearParseCache, 
+  getParseCacheSize, 
+  buildCacheKey,
+  shutdownCacheManager,
+  resetCacheManager,
+  isCleanupIntervalRunning,
+} from '../src/core/parser/cache-manager.js';
 import { parseStrictJson, parseStrictJsonAsync } from '../src/core/parser/index.js';
 import type { StrictJsonOptions } from '../src/core/types.js';
 
@@ -924,7 +931,141 @@ describe('LRUCache - Constants Exports', () => {
   });
 });
 
+describe('Cache Manager - Cleanup Functions', () => {
+  // Відновлюємо стан після кожного тесту
+  afterEach(() => {
+    resetCacheManager();
+  });
+
+  describe('isCleanupIntervalRunning()', () => {
+    it('повертає true коли interval запущено', () => {
+      // Interval автоматично запускається при завантаженні модуля
+      expect(isCleanupIntervalRunning()).toBe(true);
+    });
+
+    it('повертає false після shutdownCacheManager()', () => {
+      shutdownCacheManager();
+      expect(isCleanupIntervalRunning()).toBe(false);
+    });
+
+    it('повертає true після resetCacheManager()', () => {
+      shutdownCacheManager();
+      expect(isCleanupIntervalRunning()).toBe(false);
+      
+      resetCacheManager();
+      expect(isCleanupIntervalRunning()).toBe(true);
+    });
+  });
+
+  describe('shutdownCacheManager()', () => {
+    it('зупиняє cleanup interval', () => {
+      expect(isCleanupIntervalRunning()).toBe(true);
+      
+      shutdownCacheManager();
+      
+      expect(isCleanupIntervalRunning()).toBe(false);
+    });
+
+    it('очищує кеш', () => {
+      // Додаємо дані в кеш
+      parseStrictJson('{"test": "data"}', { enableCache: true });
+      expect(getParseCacheSize()).toBeGreaterThan(0);
+      
+      shutdownCacheManager();
+      
+      expect(getParseCacheSize()).toBe(0);
+    });
+
+    it('безпечна для повторного виклику', () => {
+      shutdownCacheManager();
+      shutdownCacheManager();
+      shutdownCacheManager();
+      
+      expect(isCleanupIntervalRunning()).toBe(false);
+    });
+
+    it('дозволяє продовжувати використання кешу після shutdown', () => {
+      shutdownCacheManager();
+      
+      // Кеш все ще може використовуватися, просто interval не запущено
+      parseStrictJson('{"new": "data"}', { enableCache: true });
+      expect(getParseCacheSize()).toBe(1);
+    });
+  });
+
+  describe('resetCacheManager()', () => {
+    it('перезапускає cleanup interval', () => {
+      shutdownCacheManager();
+      expect(isCleanupIntervalRunning()).toBe(false);
+      
+      resetCacheManager();
+      
+      expect(isCleanupIntervalRunning()).toBe(true);
+    });
+
+    it('створює новий порожній кеш', () => {
+      // Додаємо дані в кеш
+      parseStrictJson('{"test": "data"}', { enableCache: true });
+      expect(getParseCacheSize()).toBeGreaterThan(0);
+      
+      resetCacheManager();
+      
+      expect(getParseCacheSize()).toBe(0);
+    });
+
+    it('безпечна для повторного виклику', () => {
+      resetCacheManager();
+      resetCacheManager();
+      resetCacheManager();
+      
+      expect(isCleanupIntervalRunning()).toBe(true);
+      expect(getParseCacheSize()).toBe(0);
+    });
+
+    it('повністю скидає стан після shutdown', () => {
+      // Додаємо дані
+      parseStrictJson('{"data1": "value1"}', { enableCache: true });
+      parseStrictJson('{"data2": "value2"}', { enableCache: true });
+      expect(getParseCacheSize()).toBe(2);
+      
+      // Shutdown
+      shutdownCacheManager();
+      expect(isCleanupIntervalRunning()).toBe(false);
+      expect(getParseCacheSize()).toBe(0);
+      
+      // Reset
+      resetCacheManager();
+      expect(isCleanupIntervalRunning()).toBe(true);
+      expect(getParseCacheSize()).toBe(0);
+      
+      // Перевіряємо, що новий кеш працює
+      parseStrictJson('{"new": "data"}', { enableCache: true });
+      expect(getParseCacheSize()).toBe(1);
+    });
+  });
+
+  describe('Memory Leak Prevention', () => {
+    it('багаторазові reset не створюють нові interval', () => {
+      // Перевіряємо, що повторні виклики не створюють дублікати interval
+      for (let i = 0; i < 10; i++) {
+        resetCacheManager();
+        expect(isCleanupIntervalRunning()).toBe(true);
+      }
+    });
+
+    it('shutdown + reset цикли працюють коректно', () => {
+      for (let i = 0; i < 5; i++) {
+        shutdownCacheManager();
+        expect(isCleanupIntervalRunning()).toBe(false);
+        
+        resetCacheManager();
+        expect(isCleanupIntervalRunning()).toBe(true);
+      }
+    });
+  });
+});
+
 // Очищення після всіх тестів
 afterAll(() => {
-  clearParseCache();
+  resetCacheManager();
 });

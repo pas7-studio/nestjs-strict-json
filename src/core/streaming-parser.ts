@@ -10,7 +10,7 @@ interface ParserState {
   objectDepth: number;
   arrayDepth: number;
   currentKey: string;
-  keysInCurrentObject: Set<string>;
+  keysStack: Set<string>[]; // Stack of Sets for tracking keys at each nesting level
   pathStack: string[];
   buffer: string;
   completed: boolean;
@@ -36,7 +36,7 @@ function createInitialState(): ParserState {
     objectDepth: 0,
     arrayDepth: 0,
     currentKey: '',
-    keysInCurrentObject: new Set(),
+    keysStack: [], // Stack of Sets for tracking keys at each nesting level
     pathStack: ['$'],
     buffer: '',
     completed: false,
@@ -218,14 +218,14 @@ export class StreamingJsonParser extends Transform {
           case '{':
             this.state.objectDepth++;
             this.state.inObject = true;
-            this.state.keysInCurrentObject = new Set();
+            this.state.keysStack.push(new Set()); // Push new Set for this object level
             this.state.expectingKey = true; // After '{', expect a key
             break;
 
           case '}':
             if (this.state.objectDepth > 0) {
               this.state.objectDepth--;
-              this.state.keysInCurrentObject.clear();
+              this.state.keysStack.pop(); // Pop the Set for this object level
               // Reset inObject flag if we've exited all objects
               this.state.inObject = this.state.objectDepth > 0;
               // After '}', expect a key if still in an object
@@ -429,14 +429,20 @@ export class StreamingJsonParser extends Transform {
     // Get the path before adding the key
     const keyPath = this.getCurrentPath();
 
+    // Get the current keys Set from the top of the stack
+    const currentKeys = this.state.keysStack[this.state.keysStack.length - 1];
+    
     // Check for duplicate key
-    if (this.state.keysInCurrentObject.has(this.state.currentKey)) {
+    if (currentKeys && currentKeys.has(this.state.currentKey)) {
       throw new Error(`Duplicate key '${this.state.currentKey}' at ${keyPath}`);
     }
 
     // Add current key to path stack after validation
     this.state.pathStack.push(this.state.currentKey);
-    this.state.keysInCurrentObject.add(this.state.currentKey);
+    // Add to the current object's keys Set
+    if (currentKeys) {
+      currentKeys.add(this.state.currentKey);
+    }
     this.state.currentKey = '';
     
     // After ':', we expect a value, not a key
