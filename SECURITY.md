@@ -11,6 +11,7 @@ If you discover a security vulnerability, please report it responsibly.
 
 **DO**:
 - Send an email to security@pas7.studio
+- [Contact us via website](https://pas7.com.ua/contact)
 - Include details about the vulnerability
 - Provide reproduction steps
 - Suggest a fix (if possible)

@@ -2,6 +2,8 @@
 
 `@pas7/nestjs-strict-json` is a strict JSON parser for **NestJS**, **Express**, and **Fastify**.
 
+> 📖 **Read our article**: [Understanding JSON Security Vulnerabilities and How We Solve Them](https://pas7.com.ua/blog/en/nestjs-strict-json) - deep dive into the problems this package solves.
+
 It blocks dangerous and ambiguous payloads at parser level:
 - duplicate JSON keys
 - prototype pollution keys (`__proto__`, `constructor`, `prototype`)
@@ -277,10 +279,17 @@ registerStrictJson(app, {
 - [User Guide](README.md) - current file
 - [Optimization Guide](docs/OPTIMIZATION-GUIDE.md) - detailed optimization guide
 - [Performance Report](performance/reports/comparison-latest.md) - detailed performance report
+- 📖 [Article: Understanding JSON Security Vulnerabilities](https://pas7.com.ua/blog/en/nestjs-strict-json) - deep dive into the problems this package solves
 
 ## 🤝 Support
 
-For support, please open an [issue](https://github.com/pas7-studio/nestjs-strict-json/issues) or contact [maintainer](mailto:maintainer@example.com).
+For support, please:
+- Open an [issue](https://github.com/pas7-studio/nestjs-strict-json/issues)
+- [Contact us](https://pas7.com.ua/contact) via our website
+
+## 🏢 Maintained by
+
+[PAS7](https://pas7.com.ua/) - Software development company
 
 ## License
 

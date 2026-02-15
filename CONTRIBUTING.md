@@ -61,4 +61,10 @@ npx tsx examples/fastify-main.ts
 
 ## Questions?
 
-Feel free to open an issue for any questions!
+Feel free to:
+- Open an [issue](https://github.com/pas7-studio/nestjs-strict-json/issues) for any questions
+- [Contact us](https://pas7.com.ua/contact) via our website
+
+## Maintained by
+
+[PAS7](https://pas7.com.ua/) - Software development company

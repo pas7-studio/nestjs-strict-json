@@ -1,15 +1,21 @@
 {
   "name": "@pas7/nestjs-strict-json",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "description": "Strict JSON parsing for NestJS (Express/Fastify) with duplicate-key detection",
   "license": "Apache-2.0",
+  "author": {
+    "name": "PAS7",
+    "email": "pas7std@gmail.com",
+    "url": "https://pas7.com.ua/"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pas7-studio/nestjs-strict-json.git"
   },
-  "homepage": "https://github.com/pas7-studio/nestjs-strict-json",
+  "homepage": "https://pas7.com.ua/blog/en/nestjs-strict-json",
   "bugs": {
-    "url": "https://github.com/pas7-studio/nestjs-strict-json/issues"
+    "url": "https://github.com/pas7-studio/nestjs-strict-json/issues",
+    "email": "pas7std@gmail.com"
   },
   "keywords": [
     "nestjs",

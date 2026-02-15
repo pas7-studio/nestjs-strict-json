@@ -525,7 +525,14 @@ For best results, combine multiple optimizations based on your specific use case
 
 ## Additional Resources
 
+- 📖 [Article: Understanding JSON Security Vulnerabilities](https://pas7.com.ua/blog/en/nestjs-strict-json) - deep dive into the problems this package solves
 - [Source Code](../src/core/parser.ts)
 - [Benchmarks](../performance/benchmarks/)
 - [Examples](../examples/)
 - [API Documentation](../README.md)
+
+---
+
+## Maintained by
+
+[PAS7](https://pas7.com.ua/) - Software development company | [Contact us](https://pas7.com.ua/contact)
