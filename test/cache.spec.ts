@@ -155,18 +155,17 @@ describe('LRUCache - LRU Eviction', () => {
   });
 
   it('set() переміщує запис в кінець (LRU)', () => {
-    cache.set('key1', 1);
-    cache.set('key2', 2);
-    cache.set('key3', 3);
+    const keys = ['key1', 'key2', 'key3'];
+    keys.forEach((k, i) => cache.set(k, i + 1));
     
     // Оновлюємо key1, переміщуємо його в кінець
-    cache.set('key1', 100);
+    cache.set(keys[0], 100);
     
     // Додаємо новий запис, має видалити key2 (тепер найстаріший)
     cache.set('key4', 4);
-    expect(cache.has('key1')).toBe(true);
-    expect(cache.has('key2')).toBe(false);
-    expect(cache.has('key3')).toBe(true);
+    expect(cache.has(keys[0])).toBe(true);
+    expect(cache.has(keys[1])).toBe(false);
+    expect(cache.has(keys[2])).toBe(true);
     expect(cache.has('key4')).toBe(true);
     expect(cache.get('key1')).toBe(100);
   });
