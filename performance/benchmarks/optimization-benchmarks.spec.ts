@@ -17,6 +17,13 @@ import { parseStrictJson, parseStrictJsonAsync, clearParseCache, getParseCacheSi
 /**
  * Generate large JSON payload (1MB)
  */
+function getSizeLabel(size: number): string {
+  if (size >= 1 * 1024 * 1024) return '1MB';
+  if (size >= 500 * 1024) return '500KB';
+  if (size >= 100 * 1024) return '100KB';
+  return '1KB';
+}
+
 function generateLargePayload(sizeInBytes: number): string {
   const items = [];
   const itemSize = 100; // Approximate size of each item in bytes
@@ -356,10 +363,7 @@ describe('Optimization Benchmarks', () => {
 
       for (const size of sizes) {
         const json = generateLargePayload(size);
-        const isLarge = size >= 1 * 1024 * 1024;
-        const isMedium = size >= 500 * 1024;
-        const isSmall = size >= 100 * 1024;
-        const sizeLabel = isLarge ? '1MB' : isMedium ? '500KB' : isSmall ? '100KB' : '1KB';
+        const sizeLabel = getSizeLabel(size);
         
         const result = runBenchmark(
           'Size Scaling',

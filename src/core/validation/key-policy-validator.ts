@@ -186,12 +186,6 @@ export class KeyPolicyValidator {
       if (normalizedPattern.startsWith('*.') && this.matchesStarPrefixLastPart(normalizedPattern, normalizedKey)) return true;
       if (normalizedPattern.includes('**') && this.matchesDoubleStarPrefix(normalizedPattern, normalizedKey)) return true;
       if (this.matchesStarPrefix(normalizedPattern, normalizedKey)) return true;
-
-      if (normalizedPattern !== normalizedKey && 
-          normalizedPattern.startsWith(normalizedKey + '.') &&
-          normalizedPattern.endsWith('.*')) {
-        return true;
-      }
     }
 
     return false;

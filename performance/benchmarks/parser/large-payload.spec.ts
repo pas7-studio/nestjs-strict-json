@@ -7,6 +7,12 @@ import { runBenchmark, BenchmarkSuite } from '../../utils/benchmark-runner.js';
 import { saveReports } from '../../utils/reporters.js';
 import { parseStrictJson } from '../../../src/index.js';
 
+function getIterations(count: number): number {
+  if (count === 1000) return 100;
+  if (count === 10000) return 50;
+  return 10;
+}
+
 /**
  * Генерує JSON з великою кількістю об'єктів
  */
@@ -314,7 +320,7 @@ describe('Large Payload Benchmarks', () => {
 
       for (const count of [1000, 10000, 100000]) {
         const json = generateLargeObjectArray(count, 5);
-        const iterations = count === 1000 ? 100 : count === 10000 ? 50 : 10;
+        const iterations = getIterations(count);
         const result = runBenchmark(
           'Scaling Test',
           `${count} Objects`,

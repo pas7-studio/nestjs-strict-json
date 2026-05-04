@@ -7,7 +7,6 @@ import { runBenchmark, measurePeakMemory, BenchmarkSuite } from '../../utils/ben
 import { saveReports } from '../../utils/reporters.js';
 import { toJsonString } from '../../utils/generators.js';
 import { parseStrictJson } from '../../../src/index.js';
-import { Readable } from 'node:stream';
 
 describe('Memory Usage Benchmarks', () => {
   const smallJson = toJsonString({
