@@ -8,52 +8,55 @@
  * @returns Regular expression for matching
  */
 export function globToRegex(pattern: string): RegExp {
-  let result = '';
+  const parts: string[] = [];
   let i = 0;
 
   while (i < pattern.length) {
-    if (pattern[i] === '*') {
-      // Check for ** (double wildcard)
-      if (i + 1 < pattern.length && pattern[i + 1] === '*') {
-        result += '.*?'; // Non-greedy match of any characters including dots
-        i += 2;
-        continue;
-      }
-
-      // Single * - match any characters EXCEPT dots
-      // This ensures patterns like "users.*.name" work correctly
-      // Also handle special case: * at end of pattern or before a dot
-      const isAtEnd = i + 1 >= pattern.length;
-      const nextIsDot = i + 1 < pattern.length && pattern[i + 1] === '.';
-      const nextIsBracket = i + 1 < pattern.length && pattern[i + 1] === ']';
-
-      if (isAtEnd) {
-        result += '.*'; // At end, allow empty or any chars (including dots)
-      } else if (nextIsDot) {
-        result += '[^.]*'; // Before dot, only match non-dot chars (a single segment)
-      } else if (nextIsBracket) {
-        result += '[^]]*'; // Before ], only match non-] chars (a single array element)
-      } else {
-        result += '[^.]*'; // Otherwise, only non-dot chars
-      }
-      i++;
-    } else if (pattern[i] === '?') {
-      // ? matches any single character
-      result += '.';
-      i++;
-    } else {
-      // Escape special regex characters
-      const char = pattern[i];
-      if ('.+^${}()|[]\\'.includes(char)) {
-        result += '\\' + char;
-      } else {
-        result += char;
-      }
-      i++;
-    }
+    const part = processNextChar(pattern, i);
+    parts.push(part.result);
+    i = part.nextIndex;
   }
 
-  return new RegExp(`^${result}$`);
+  return new RegExp(`^${parts.join('')}$`);
+}
+
+function processNextChar(pattern: string, i: number): { result: string; nextIndex: number } {
+  if (pattern[i] === '*') {
+    return processWildcardChar(pattern, i);
+  }
+
+  if (pattern[i] === '?') {
+    return { result: '.', nextIndex: i + 1 };
+  }
+
+  const char = pattern[i];
+  if ('.+^${}()|[]\\'.includes(char)) {
+    return { result: '\\' + char, nextIndex: i + 1 };
+  }
+
+  return { result: char, nextIndex: i + 1 };
+}
+
+function processWildcardChar(pattern: string, i: number): { result: string; nextIndex: number } {
+  if (i + 1 < pattern.length && pattern[i + 1] === '*') {
+    return { result: '.*?', nextIndex: i + 2 };
+  }
+
+  const isAtEnd = i + 1 >= pattern.length;
+  const nextIsDot = i + 1 < pattern.length && pattern[i + 1] === '.';
+  const nextIsBracket = i + 1 < pattern.length && pattern[i + 1] === ']';
+
+  if (isAtEnd) {
+    return { result: '.*', nextIndex: i + 1 };
+  }
+  if (nextIsDot) {
+    return { result: '[^.]*', nextIndex: i + 1 };
+  }
+  if (nextIsBracket) {
+    return { result: '[^]]*', nextIndex: i + 1 };
+  }
+
+  return { result: '[^.]*', nextIndex: i + 1 };
 }
 
 /**

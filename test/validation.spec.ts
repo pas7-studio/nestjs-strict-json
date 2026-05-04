@@ -73,30 +73,30 @@ describe('PatternMatcher - Edge Cases', () => {
     });
 
     it('повинен обробляти патерни з бекслешем (\\)', () => {
-      const matcher = new PatternMatcher(['path\\to']);
-      expect(matcher.matches('path\\to')).toBe(true);
+      const matcher = new PatternMatcher([String.raw`path\to`]);
+      expect(matcher.matches(String.raw`path\to`)).toBe(true);
     });
   });
 
   describe('Патерни з escaped символами (\\d, \\w, \\s)', () => {
     it('повинен обробляти патерни з \\d (digit)', () => {
-      const matcher = new PatternMatcher(['test\\d']);
-      expect(matcher.matches('test\\d')).toBe(true);
+      const matcher = new PatternMatcher([String.raw`test\d`]);
+      expect(matcher.matches(String.raw`test\d`)).toBe(true);
     });
 
     it('повинен обробляти патерни з \\w (word)', () => {
-      const matcher = new PatternMatcher(['test\\w']);
-      expect(matcher.matches('test\\w')).toBe(true);
+      const matcher = new PatternMatcher([String.raw`test\w`]);
+      expect(matcher.matches(String.raw`test\w`)).toBe(true);
     });
 
     it('повинен обробляти патерни з \\s (space)', () => {
-      const matcher = new PatternMatcher(['test\\s']);
-      expect(matcher.matches('test\\s')).toBe(true);
+      const matcher = new PatternMatcher([String.raw`test\s`]);
+      expect(matcher.matches(String.raw`test\s`)).toBe(true);
     });
 
     it('повинен обробляти комбінації escaped символів', () => {
-      const matcher = new PatternMatcher(['\\d\\w\\s']);
-      expect(matcher.matches('\\d\\w\\s')).toBe(true);
+      const matcher = new PatternMatcher([String.raw`\d\w\s`]);
+      expect(matcher.matches(String.raw`\d\w\s`)).toBe(true);
     });
   });
 
@@ -219,8 +219,8 @@ describe('PatternMatcher - Edge Cases', () => {
 
   describe('Метод matchesExact edge cases', () => {
     it('повинен знаходити точні збіги зі спецсимволами', () => {
-      const matcher = new PatternMatcher(['data\\..*']);
-      expect(matcher.matchesExact('data\\..*')).toBe(true);
+      const matcher = new PatternMatcher([String.raw`data\..*`]);
+      expect(matcher.matchesExact(String.raw`data\..*`)).toBe(true);
       expect(matcher.matchesExact('data.' + '*')).toBe(false);
     });
 
@@ -235,13 +235,13 @@ describe('PatternMatcher - Edge Cases', () => {
   describe('Методи управління патернами edge cases', () => {
     it('додати патерн з спецсимволами', () => {
       const matcher = new PatternMatcher();
-      matcher.addPattern('test\\d\\w');
-      expect(matcher.matches('test\\d\\w')).toBe(true);
+      matcher.addPattern(String.raw`test\d\w`);
+      expect(matcher.matches(String.raw`test\d\w`)).toBe(true);
     });
 
     it('додати дублікат патерна з спецсимволами', () => {
-      const matcher = new PatternMatcher(['test\\d']);
-      matcher.addPattern('test\\d');
+      const matcher = new PatternMatcher([String.raw`test\d`]);
+      matcher.addPattern(String.raw`test\d`);
       expect(matcher.size()).toBe(1);
     });
 
@@ -253,9 +253,9 @@ describe('PatternMatcher - Edge Cases', () => {
     });
 
     it('отримати патерни які містять спецсимволи', () => {
-      const matcher = new PatternMatcher(['test\\d', 'test\\w']);
+      const matcher = new PatternMatcher([String.raw`test\d`, String.raw`test\w`]);
       const patterns = matcher.getPatterns();
-      expect(patterns).toEqual(['test\\d', 'test\\w']);
+      expect(patterns).toEqual([String.raw`test\d`, String.raw`test\w`]);
     });
   });
 });
@@ -657,25 +657,25 @@ describe('isKeyAllowed - Edge Cases', () => {
     });
 
     it('повинен обробляти бекслеш в патерні', () => {
-      expect(isKeyAllowed('path\\to', ['path\\to'])).toBe(true);
+      expect(isKeyAllowed(String.raw`path\to`, [String.raw`path\to`])).toBe(true);
     });
   });
 
   describe('Патерни з \\d, \\w, \\s escape sequences', () => {
     it('повинен обробляти \\d в патерні', () => {
-      expect(isKeyAllowed('test\\d', ['test\\d'])).toBe(true);
+      expect(isKeyAllowed(String.raw`test\d`, [String.raw`test\d`])).toBe(true);
     });
 
     it('повинен обробляти \\w в патерні', () => {
-      expect(isKeyAllowed('test\\w', ['test\\w'])).toBe(true);
+      expect(isKeyAllowed(String.raw`test\w`, [String.raw`test\w`])).toBe(true);
     });
 
     it('повинен обробляти \\s в патерні', () => {
-      expect(isKeyAllowed('test\\s', ['test\\s'])).toBe(true);
+      expect(isKeyAllowed(String.raw`test\s`, [String.raw`test\s`])).toBe(true);
     });
 
     it('повинен обробляти комбінації escape sequences', () => {
-      expect(isKeyAllowed('\\d\\w\\s', ['\\d\\w\\s'])).toBe(true);
+      expect(isKeyAllowed(String.raw`\d\w\s`, [String.raw`\d\w\s`])).toBe(true);
     });
   });
 
@@ -796,15 +796,15 @@ describe('isKeyAllowed - Edge Cases', () => {
     });
 
     it('undefined whitelist та undefined blacklist дозволяють все', () => {
-      expect(isKeyAllowed('any.key', undefined, undefined)).toBe(true);
-      expect(isKeyAllowed('data', undefined, undefined)).toBe(true);
+      expect(isKeyAllowed('any.key')).toBe(true);
+      expect(isKeyAllowed('data')).toBe(true);
     });
   });
 
   describe('Edge cases з null/undefined whitelist та blacklist', () => {
     it('undefined whitelist дозволяє все якщо немає blacklist', () => {
-      expect(isKeyAllowed('any.key', undefined, undefined)).toBe(true);
-      expect(isKeyAllowed('data.value', undefined, undefined)).toBe(true);
+      expect(isKeyAllowed('any.key')).toBe(true);
+      expect(isKeyAllowed('data.value')).toBe(true);
     });
 
     it('undefined whitelist з blacklist забороняє blacklist патерни', () => {
@@ -813,8 +813,8 @@ describe('isKeyAllowed - Edge Cases', () => {
     });
 
     it('whitelist з undefined blacklist дозволяє все в whitelist', () => {
-      expect(isKeyAllowed('user.name', ['user.*'], undefined)).toBe(true);
-      expect(isKeyAllowed('admin.name', ['user.*'], undefined)).toBe(false);
+      expect(isKeyAllowed('user.name', ['user.*'])).toBe(true);
+      expect(isKeyAllowed('admin.name', ['user.*'])).toBe(false);
     });
 
     it('порожній масив whitelist забороняє все', () => {
@@ -874,18 +874,17 @@ describe('isKeyAllowed - Edge Cases', () => {
     });
 
     it('повинен працювати з \\t (tab) в ключах', () => {
-      // glob * не включає tab символ, тому це може бути true або false залежно від реалізації
-      expect(isKeyAllowed('data\tkey', ['data*'])).toBe(true); // * може включати tab
+      expect(isKeyAllowed('data\tkey', ['data*'])).toBe(true);
     });
 
     it('повинен працювати з \\r (carriage return) в ключах', () => {
-      expect(isKeyAllowed('data\rkey', ['data*'])).toBe(false); // * не включає \r
+      expect(isKeyAllowed('data\rkey', ['data*'])).toBe(false);
     });
   });
 
   describe('Escape sequences в ключах', () => {
     it('повинен працювати з escaped символами в ключах', () => {
-      expect(isKeyAllowed('data\\.key', ['data\\..*'])).toBe(false); // glob не розпізнає \\.
+      expect(isKeyAllowed('data\\.key', ['data\\..*'])).toBe(false);
     });
 
     it('повинен працювати з бекслешем в ключах', () => {
@@ -1082,20 +1081,14 @@ describe('Validator Cache - Optimization Tests', () => {
     });
 
     it('повинен видаляти найстаріші записи при переповненні', () => {
-      // Створюємо перший запис
-      const firstValidator = getCachedValidator(['first.*'], undefined, false);
+      getCachedValidator(['first.*'], undefined, false);
       
-      // Заповнюємо кеш до максимуму
       for (let i = 0; i < 150; i++) {
         getCachedValidator([`key${i}.*`], undefined, false);
       }
       
-      // Перший запис має бути витіснений
-      const newFirstValidator = getCachedValidator(['first.*'], undefined, false);
+      getCachedValidator(['first.*'], undefined, false);
       
-      // Це має бути новий екземпляр (старий був витіснений)
-      // Примітка: це може не спрацювати якщо first.* все ще в кеші
-      // але логіка LRU працює
       expect(getValidatorCacheSize()).toBeLessThanOrEqual(100);
     });
   });

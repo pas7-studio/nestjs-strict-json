@@ -43,7 +43,7 @@ export const createStrictJsonExpressMiddleware =
     try {
       // Check content-length header to determine if streaming should be used
       const contentLength = req.headers["content-length"]
-        ? parseInt(req.headers["content-length"], 10)
+        ? Number.parseInt(req.headers["content-length"], 10)
         : undefined;
 
       // Determine which parsing strategy to use
@@ -96,13 +96,16 @@ export const createStrictJsonExpressMiddleware =
         const isKeyNotAllowed = e.message.includes("is not allowed");
 
         if (isDuplicateKey || isPrototypePollution || isDepthLimit || isKeyNotAllowed) {
-          const code = isDuplicateKey
-            ? "STRICT_JSON_DUPLICATE_KEY"
-            : isPrototypePollution
-              ? "STRICT_JSON_PROTOTYPE_POLLUTION"
-              : isDepthLimit
-                ? "STRICT_JSON_DEPTH_LIMIT"
-                : "STRICT_JSON_INVALID_JSON";
+          let code: string;
+          if (isDuplicateKey) {
+            code = "STRICT_JSON_DUPLICATE_KEY";
+          } else if (isPrototypePollution) {
+            code = "STRICT_JSON_PROTOTYPE_POLLUTION";
+          } else if (isDepthLimit) {
+            code = "STRICT_JSON_DEPTH_LIMIT";
+          } else {
+            code = "STRICT_JSON_INVALID_JSON";
+          }
 
           res.statusCode = 400;
           res.setHeader("content-type", "application/json; charset=utf-8");

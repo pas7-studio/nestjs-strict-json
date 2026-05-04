@@ -1,5 +1,4 @@
-import { NestFactory } from "@nestjs/common"
-import { Controller, Post, Body } from "@nestjs/common"
+import { NestFactory, Controller, Post, Body } from "@nestjs/common"
 import { registerStrictJson } from "../src/nest/register.js"
 
 @Controller()

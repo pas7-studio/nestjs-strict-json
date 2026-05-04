@@ -21,7 +21,7 @@ import { globToRegex } from '../utils.js';
  */
 export class PatternMatcher {
   private patterns: string[];
-  private compiledPatterns: Map<string, RegExp>;
+  private readonly compiledPatterns: Map<string, RegExp>;
 
   /**
    * Створює новий екземпляр PatternMatcher
@@ -84,7 +84,7 @@ export class PatternMatcher {
     // Потім перевіряємо патерни через precompiled regex
     for (const pattern of this.patterns) {
       const regex = this.compiledPatterns.get(pattern);
-      if (regex && regex.test(key)) {
+      if (regex?.test(key)) {
         return true;
       }
     }

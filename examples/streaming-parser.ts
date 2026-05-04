@@ -145,7 +145,7 @@ app.post("/api/size-limited/data", (req: Request, res: Response) => {
  * Example 9: Generate test data for large payload testing
  */
 app.get("/api/generate-large-payload", (req: Request, res: Response) => {
-  const size = parseInt(req.query.size as string) || 200000; // default ~100KB
+  const size = Number.parseInt(req.query.size as string) || 200000; // default ~100KB
   const data: Record<string, number> = {};
   
   for (let i = 0; i < size; i++) {

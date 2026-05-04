@@ -17,9 +17,8 @@ class ErrorHandler {
     if (handler) {
       try {
         handler(error);
-      } catch (handlerError) {
+      } catch {
         // Handler errors should not prevent original error from being thrown
-        // Do nothing, just ignore handler errors
       }
     }
   }
@@ -36,9 +35,8 @@ class ErrorHandler {
     if (handler) {
       try {
         await handler(error);
-      } catch (handlerError) {
+      } catch {
         // Handler errors should not prevent original error from being thrown
-        // Do nothing, just ignore handler errors
       }
     }
   }

@@ -2,7 +2,7 @@ import type { StrictJsonOptions } from "../types.js";
 import type { ICache } from "../cache/index.js";
 import { createCache } from "../cache/cache-factory.js";
 import { LRUCache } from "../cache/lru-cache.js";
-import { createHash } from "crypto";
+import { createHash } from "node:crypto";
 
 // Global cache instance using ICache interface
 let parseCache: ICache<string, unknown> = createCache();
@@ -232,7 +232,9 @@ export function buildCacheKey(jsonStr: string, options?: StrictJsonOptions): str
   return hash;
 }
 
-// Export cache instance and defaults for internal use
-export { parseCache };
+// Export cache instance getter for internal use
+export function getParseCache(): ICache<string, unknown> {
+  return parseCache;
+}
 // Re-export from cache module for backward compatibility
 export { LRUCache, DEFAULT_CACHE_TTL, DEFAULT_CACHE_SIZE } from "../cache/index.js";

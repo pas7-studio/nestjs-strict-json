@@ -16,33 +16,27 @@ import type { StrictJsonOptions } from "../types.js";
  * @throws {PrototypePollutionError} When prototype pollution is detected
  */
 export function parseWithFastPath(jsonStr: string, options?: StrictJsonOptions): unknown {
-  try {
-    const parsed = JSON.parse(jsonStr);
+  const parsed = JSON.parse(jsonStr);
+  
+  if (options?.enablePrototypePollutionProtection !== false) {
+    const dangerousKeys = new Set(['__proto__', 'constructor', 'prototype']);
     
-    // Only check for prototype pollution (fast check)
-    if (options?.enablePrototypePollutionProtection !== false) {
-      const dangerousKeys = new Set(['__proto__', 'constructor', 'prototype']);
-      
-      function checkPrototypePollution(obj: unknown, path: string = '$'): void {
-        if (obj && typeof obj === 'object') {
-          const record = obj as Record<string, unknown>;
-          for (const key of Object.keys(record)) {
-            if (dangerousKeys.has(key)) {
-              throw new PrototypePollutionError(key, path);
-            }
-            if (typeof record[key] === 'object' && record[key] !== null) {
-              checkPrototypePollution(record[key], `${path}.${key}`);
-            }
+    function checkPrototypePollution(obj: unknown, path: string = '$'): void {
+      if (obj && typeof obj === 'object') {
+        const record = obj as Record<string, unknown>;
+        for (const key of Object.keys(record)) {
+          if (dangerousKeys.has(key)) {
+            throw new PrototypePollutionError(key, path);
+          }
+          if (typeof record[key] === 'object' && record[key] !== null) {
+            checkPrototypePollution(record[key], `${path}.${key}`);
           }
         }
       }
-      
-      checkPrototypePollution(parsed);
     }
     
-    return parsed;
-  } catch (error) {
-    // If anything fails, fall back to full parser
-    throw error;
+    checkPrototypePollution(parsed);
   }
+  
+  return parsed;
 }

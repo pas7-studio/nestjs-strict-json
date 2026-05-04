@@ -185,7 +185,7 @@ describe("Extended Configuration Options", () => {
     it("should validate nested objects with multiple patterns", () => {
       const json = '{"data": {"user": {"name": "John", "email": "john@example.com"}, "settings": {"theme": "dark"}}}';
 
-      const result = parseStrictJson(json, {
+      parseStrictJson(json, {
         whitelist: ["data.user.*", "data.settings.theme"],
         blacklist: ["*.email"]
       });

@@ -1,4 +1,4 @@
-import { Transform, TransformCallback } from 'stream';
+import { Transform, TransformCallback } from 'node:stream';
 import type { StrictJsonOptions } from './types.js';
 import { isKeyAllowed } from './validation/index.js';
 
@@ -50,8 +50,8 @@ function createInitialState(): ParserState {
  * Processes data in chunks without storing the entire JSON in memory.
  */
 export class StreamingJsonParser extends Transform {
-  private state: ParserState;
-  private options?: StrictJsonOptions;
+  private readonly state: ParserState;
+  private readonly options?: StrictJsonOptions;
   private readonly maxDepth: number;
   private readonly dangerousKeys: string[];
   private readonly enablePrototypeProtection: boolean;
@@ -189,130 +189,130 @@ export class StreamingJsonParser extends Transform {
       const char = buffer[i];
 
       if (this.state.inString) {
-        if (this.state.escapeNext) {
-          this.state.escapeNext = false;
-          i++;
-          continue;
-        }
-
-        if (char === '\\') {
-          this.state.escapeNext = true;
-          i++;
-          continue;
-        }
-
-        if (char === '"') {
-          this.state.inString = false;
-          // If we were expecting a key, extract and process it
-          if (this.state.expectingKey && this.state.currentKey !== '') {
-            this.processStringEndForKey();
-          }
-        }
-      } else {
-        switch (char) {
-          case '"':
-            this.state.inString = true;
-            this.processStringStart(buffer, i);
-            break;
-
-          case '{':
-            this.state.objectDepth++;
-            this.state.inObject = true;
-            this.state.keysStack.push(new Set()); // Push new Set for this object level
-            this.state.expectingKey = true; // After '{', expect a key
-            break;
-
-          case '}':
-            if (this.state.objectDepth > 0) {
-              this.state.objectDepth--;
-              this.state.keysStack.pop(); // Pop the Set for this object level
-              // Reset inObject flag if we've exited all objects
-              this.state.inObject = this.state.objectDepth > 0;
-              // After '}', expect a key if still in an object
-              this.state.expectingKey = this.state.inObject;
-              if (this.state.pathStack.length > 1) {
-                this.state.pathStack.pop();
-              }
-            }
-            // Check if we've returned to root level
-            if (this.state.objectDepth === 0 && this.state.arrayDepth === 0) {
-              this.state.completed = true;
-            }
-            break;
-
-          case '[':
-            this.state.arrayDepth++;
-            this.state.inArray = true;
-            this.state.expectingKey = false; // In arrays, expect values, not keys
-            // Note: We do NOT clear keys when entering/exiting arrays.
-            // Arrays are just values for keys, they don't start a new object scope.
-            // Keys should only be cleared when entering a new object.
-            break;
-
-          case ']':
-            if (this.state.arrayDepth > 0) {
-              this.state.arrayDepth--;
-              // Reset inArray flag if we've exited all arrays
-              this.state.inArray = this.state.arrayDepth > 0;
-              // After ']', expect a key if in an object (at any object level), false otherwise
-              this.state.expectingKey = this.state.inObject;
-              // Note: We do NOT clear keys when exiting arrays.
-              // Keys should only be cleared when exiting an object.
-              // Check if we've returned to root level
-              if (this.state.objectDepth === 0 && this.state.arrayDepth === 0) {
-                this.state.completed = true;
-              }
-            }
-            break;
-
-          case ':':
-            this.processColon();
-            break;
-
-          case ',':
-            // After ',', expect a key if in an object
-            this.state.expectingKey = this.state.inObject;
-            // Reset current key for the next key-value pair
-            this.state.currentKey = '';
-            break;
-
-          // Add validation for invalid characters
-          case ' ':
-          case '\t':
-          case '\n':
-          case '\r':
-            // Skip whitespace
-            break;
-
-          default:
-            // If we're not in a string and not expecting a value, this is invalid
-            if (!this.state.inString && !this.state.expectingKey && this.state.objectDepth === 0 && this.state.arrayDepth === 0) {
-              throw new Error('Incomplete JSON');
-            }
-            // Also check if it's an invalid character in current context
-            if (!this.state.inString && this.state.expectingKey && this.state.inObject && char !== '"' && !this.isValidPrimitive(char)) {
-              throw new Error('Incomplete JSON');
-            }
-            break;
-        }
+        i = this.processCharInString(char, i);
+        continue;
       }
 
+      this.processStructuralChar(buffer, char, i);
       i++;
     }
 
-    // Keep only the last incomplete chunk for next iteration
-    // This helps with memory efficiency
-    if (!this.state.completed) {
-      const lastBraceIndex = Math.max(
-        buffer.lastIndexOf('{'),
-        buffer.lastIndexOf('['),
-        buffer.lastIndexOf(':'),
-      );
-      if (lastBraceIndex >= 0 && i > lastBraceIndex) {
-        this.state.buffer = buffer.slice(Math.max(0, lastBraceIndex));
-      } else {
-        this.state.buffer = '';
+    this.cleanupBuffer(buffer, i);
+  }
+
+  private processCharInString(char: string, i: number): number {
+    if (this.state.escapeNext) {
+      this.state.escapeNext = false;
+      return i + 1;
+    }
+
+    if (char === '\\') {
+      this.state.escapeNext = true;
+      return i + 1;
+    }
+
+    if (char === '"') {
+      this.state.inString = false;
+      if (this.state.expectingKey && this.state.currentKey !== '') {
+        this.processStringEndForKey();
       }
+    }
+
+    return i + 1;
+  }
+
+  private processStructuralChar(buffer: string, char: string, i: number): void {
+    switch (char) {
+      case '"':
+        this.state.inString = true;
+        this.processStringStart(buffer, i);
+        break;
+      case '{':
+        this.processOpenBrace();
+        break;
+      case '}':
+        this.processCloseBrace();
+        break;
+      case '[':
+        this.state.arrayDepth++;
+        this.state.inArray = true;
+        this.state.expectingKey = false;
+        break;
+      case ']':
+        this.processCloseBracket();
+        break;
+      case ':':
+        this.processColon();
+        break;
+      case ',':
+        this.state.expectingKey = this.state.inObject;
+        this.state.currentKey = '';
+        break;
+      case ' ':
+      case '\t':
+      case '\n':
+      case '\r':
+        break;
+      default:
+        this.processDefaultChar(char);
+        break;
+    }
+  }
+
+  private processOpenBrace(): void {
+    this.state.objectDepth++;
+    this.state.inObject = true;
+    this.state.keysStack.push(new Set());
+    this.state.expectingKey = true;
+  }
+
+  private processCloseBrace(): void {
+    if (this.state.objectDepth > 0) {
+      this.state.objectDepth--;
+      this.state.keysStack.pop();
+      this.state.inObject = this.state.objectDepth > 0;
+      this.state.expectingKey = this.state.inObject;
+      if (this.state.pathStack.length > 1) {
+        this.state.pathStack.pop();
+      }
+    }
+    if (this.state.objectDepth === 0 && this.state.arrayDepth === 0) {
+      this.state.completed = true;
+    }
+  }
+
+  private processCloseBracket(): void {
+    if (this.state.arrayDepth > 0) {
+      this.state.arrayDepth--;
+      this.state.inArray = this.state.arrayDepth > 0;
+      this.state.expectingKey = this.state.inObject;
+      if (this.state.objectDepth === 0 && this.state.arrayDepth === 0) {
+        this.state.completed = true;
+      }
+    }
+  }
+
+  private processDefaultChar(char: string): void {
+    if (!this.state.inString && !this.state.expectingKey && this.state.objectDepth === 0 && this.state.arrayDepth === 0) {
+      throw new Error('Incomplete JSON');
+    }
+    if (!this.state.inString && this.state.expectingKey && this.state.inObject && char !== '"' && !this.isValidPrimitive(char)) {
+      throw new Error('Incomplete JSON');
+    }
+  }
+
+  private cleanupBuffer(buffer: string, i: number): void {
+    if (this.state.completed) {
+      this.state.buffer = '';
+      return;
+    }
+    const lastBraceIndex = Math.max(
+      buffer.lastIndexOf('{'),
+      buffer.lastIndexOf('['),
+      buffer.lastIndexOf(':'),
+    );
+    if (lastBraceIndex >= 0 && i > lastBraceIndex) {
+      this.state.buffer = buffer.slice(Math.max(0, lastBraceIndex));
     } else {
       this.state.buffer = '';
     }
@@ -430,19 +430,14 @@ export class StreamingJsonParser extends Transform {
     const keyPath = this.getCurrentPath();
 
     // Get the current keys Set from the top of the stack
-    const currentKeys = this.state.keysStack[this.state.keysStack.length - 1];
+    const currentKeys = this.state.keysStack.at(-1);
     
-    // Check for duplicate key
-    if (currentKeys && currentKeys.has(this.state.currentKey)) {
+    if (currentKeys?.has(this.state.currentKey)) {
       throw new Error(`Duplicate key '${this.state.currentKey}' at ${keyPath}`);
     }
 
-    // Add current key to path stack after validation
     this.state.pathStack.push(this.state.currentKey);
-    // Add to the current object's keys Set
-    if (currentKeys) {
-      currentKeys.add(this.state.currentKey);
-    }
+    currentKeys?.add(this.state.currentKey);
     this.state.currentKey = '';
     
     // After ':', we expect a value, not a key

@@ -103,8 +103,8 @@ describe('Fast Path - Prototype Pollution Protection', () => {
   });
 
   it('Fast path виявляє кастомні небезпечні ключі', () => {
-    const json = '{"user": "John", "customDangerousKey": "value"}';
-    const options: StrictJsonOptions = { 
+    void '{"user": "John", "customDangerousKey": "value"}';
+    void { 
       enableFastPath: true,
       dangerousKeys: ['customDangerousKey']
     };
@@ -216,7 +216,7 @@ describe('Fast Path - Performance', () => {
 
   it('Fast path має порівнянні продуктивність для складних структур', () => {
     const json = JSON.stringify({
-      data: Array(100).fill(0).map((_, i) => ({ id: i, name: `Item ${i}` }))
+      data: new Array(100).fill(0).map((_, i) => ({ id: i, name: `Item ${i}` }))
     });
     
     const start1 = performance.now();
@@ -325,7 +325,7 @@ describe('Fast Path - Edge Cases', () => {
   });
 
   it('Fast path з великими масивами (але простими)', () => {
-    const largeArray = Array(1000).fill(0).map((_, i) => i);
+    const largeArray = new Array(1000).fill(0).map((_, i) => i);
     const json = JSON.stringify(largeArray);
     const options: StrictJsonOptions = { enableFastPath: true };
     
@@ -342,7 +342,7 @@ describe('Fast Path - Edge Cases', () => {
   });
 
   it('Fast path з escape-послідовностями', () => {
-    const json = '{"text": "Line 1\\nLine 2\\tTabbed", "quote": "He said \\"Hello\\""}';
+    const json = String.raw`{"text": "Line 1\nLine 2\tTabbed", "quote": "He said \"Hello\""}`;
     const options: StrictJsonOptions = { enableFastPath: true };
     
     const result = parseStrictJson(json, options);
@@ -573,7 +573,7 @@ describe('Fast Path - Integration Tests', () => {
 
   it('Fast path не використовується для великих payloads (streaming має пріоритет)', () => {
     // Створюємо великий JSON (> 100KB за замовчуванням)
-    const largeData = { data: Array(5000).fill(0).map((_, i) => ({ id: i, name: `Item ${i}` })) };
+    const largeData = { data: new Array(5000).fill(0).map((_, i) => ({ id: i, name: `Item ${i}` })) };
     const json = JSON.stringify(largeData);
     
     const options: StrictJsonOptions = { 

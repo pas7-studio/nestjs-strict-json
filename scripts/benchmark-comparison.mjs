@@ -24,8 +24,8 @@ function generateLargePayload() {
 }
 
 function forceGc() {
-  if (typeof global.gc === "function") {
-    global.gc();
+  if (typeof globalThis.gc === "function") {
+    globalThis.gc();
   }
 }
 
@@ -110,7 +110,7 @@ function main() {
     },
     notes: {
       node: process.version,
-      gcExposed: typeof global.gc === "function",
+      gcExposed: typeof globalThis.gc === "function",
     },
     results,
   };

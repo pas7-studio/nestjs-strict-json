@@ -8,7 +8,7 @@
  * - Implement retry logic or fallback mechanisms
  */
 
-import { parseStrictJson, DuplicateKeyError, InvalidJsonError, BodyTooLargeError, PrototypePollutionError } from "../src/index.js";
+import { parseStrictJson, DuplicateKeyError, BodyTooLargeError, PrototypePollutionError } from "../src/index.js";
 
 async function main() {
   console.log("=== Custom Error Handlers Example ===\n");
@@ -93,7 +93,7 @@ async function main() {
           console.log(`  Other error: ${error.message}`);
         }
       });
-    } catch (error) {
+    } catch {
       // Error was already handled by custom handlers
     }
   }

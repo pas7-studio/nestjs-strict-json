@@ -1,51 +1,44 @@
 import { describe, expect, it } from 'vitest';
-import { Readable } from 'stream';
+import { Readable } from 'node:stream';
 import {
   StreamingJsonParser,
   shouldUseStreaming,
 } from '../src/core/streaming-parser.js';
 import { parseLargePayload, shouldUseStreamingForPayload } from '../src/core/parser/streaming.js';
-import { DuplicateKeyError, InvalidJsonError } from '../src/core/errors.js';
+import { DuplicateKeyError } from '../src/core/errors.js';
 import type { StrictJsonOptions } from '../src/core/types.js';
 
+async function validateSuccessfully(
+  jsonString: string,
+  options?: StrictJsonOptions,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const parser = new StreamingJsonParser(options);
+    parser.on('end', resolve);
+    parser.on('error', reject);
+    const stream = Readable.from([jsonString]);
+    stream.pipe(parser);
+  });
+}
+
+async function validateWithError(
+  jsonString: string,
+  options?: StrictJsonOptions,
+): Promise<Error> {
+  return new Promise((resolve) => {
+    const parser = new StreamingJsonParser(options);
+    parser.on('end', () => {
+      resolve(new Error('Expected error but parsing completed'));
+    });
+    parser.on('error', (err) => {
+      resolve(err as Error);
+    });
+    const stream = Readable.from([jsonString]);
+    stream.pipe(parser);
+  });
+}
+
 describe('StreamingJsonParser', () => {
-  // Helper function to test if parser validates successfully
-  // Note: Each parser instance must be fresh for correct state management
-  async function validateSuccessfully(
-    jsonString: string,
-    options?: StrictJsonOptions,
-  ): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const parser = new StreamingJsonParser(options);
-
-      parser.on('end', resolve);
-      parser.on('error', reject);
-
-      const stream = Readable.from([jsonString]);
-      stream.pipe(parser);
-    });
-  }
-
-  // Helper function to test if parser rejects with error
-  async function validateWithError(
-    jsonString: string,
-    options?: StrictJsonOptions,
-  ): Promise<Error> {
-    return new Promise((resolve) => {
-      const parser = new StreamingJsonParser(options);
-
-      parser.on('end', () => {
-        resolve(new Error('Expected error but parsing completed'));
-      });
-
-      parser.on('error', (err) => {
-        resolve(err as Error);
-      });
-
-      const stream = Readable.from([jsonString]);
-      stream.pipe(parser);
-    });
-  }
 
   // ========== Basic parsing tests ==========
   describe('Basic parsing', () => {
@@ -1001,12 +994,11 @@ describe('parseLargePayload', () => {
       const buffer = Buffer.from(json);
       
       let handlerCalled = false;
-      let capturedError: Error | null = null;
       
       const options: StrictJsonOptions = {
         onError: (error) => {
           handlerCalled = true;
-          capturedError = error as Error;
+          void error;
         }
       };
       

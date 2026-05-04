@@ -12,7 +12,6 @@ import {
   toJsonString
 } from '../../utils/generators.js';
 import { createStrictJsonExpressMiddleware } from '../../../src/adapters/express.js';
-import { createServer, IncomingMessage, ServerResponse } from 'http';
 import type { Request, Response, NextFunction } from 'express';
 
 /**

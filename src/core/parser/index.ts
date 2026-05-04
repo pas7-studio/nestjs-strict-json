@@ -6,250 +6,226 @@ import {
   PrototypePollutionError,
 } from "../errors.js";
 import type { StrictJsonOptions, StrictJsonErrorHandler } from "../types.js";
-import { parseCache, buildCacheKey } from "./cache-manager.js";
+import { getParseCache, buildCacheKey } from "./cache-manager.js";
 import { findDuplicateKeysInJson } from "./parser-core.js";
 import { parseWithFastPath } from "./fast-path.js";
 import { shouldUseStreamingForPayload, parseLargePayload } from "./streaming.js";
 import { errorHandler } from "./error-handler.js";
 
-// Re-export public APIs from sub-modules
 export * from "./cache-manager.js";
 export * from "./parser-core.js";
 export * from "./fast-path.js";
 export * from "./streaming.js";
 export * from "./error-handler.js";
 
-/**
- * JsonParser class that provides unified JSON parsing with strict validation.
- * 
- * This class encapsulates the common logic for both synchronous and asynchronous
- * JSON parsing, with support for:
- * - Body size limit checking
- * - Duplicate key detection
- * - Prototype pollution protection
- * - Depth limit enforcement
- * - Whitelist/blacklist key validation
- * - Caching support (enabled by default)
- * - Fast path optimization (optional)
- * - Streaming support for large payloads
- * 
- * @class JsonParser
- */
 class JsonParser {
-  private options?: StrictJsonOptions;
-  
-  /**
-   * Creates a new JsonParser instance with the specified options.
-   * 
-   * @param options - Strict JSON parsing options
-   */
+  private readonly options?: StrictJsonOptions;
+
   constructor(options?: StrictJsonOptions) {
     this.options = options;
   }
-  
-  /**
-   * Parses a JSON string or buffer with strict validation.
-   * 
-   * This method contains all the common parsing logic for both synchronous and
-   * asynchronous parsing. The `isAsync` parameter determines whether error handlers
-   * are invoked synchronously or asynchronously.
-   * 
-   * @param input - The JSON string or buffer to parse
-   * @param isAsync - Whether to use async error handlers (default: false)
-   * @returns The parsed JSON object (or a promise resolving to it if isAsync is true)
-   * @throws {BodyTooLargeError} When the input exceeds maxBodySizeBytes
-   * @throws {DuplicateKeyError} When duplicate keys are detected
-   * @throws {PrototypePollutionError} When prototype pollution is detected
-   * @throws {DepthLimitError} When the maximum depth is exceeded
-   * @throws {InvalidJsonError} When the JSON is invalid or violates whitelist/blacklist
-   */
-  parse(input: string | Buffer, isAsync: boolean = false): unknown | Promise<unknown> {
+
+  parse(input: string | Buffer, isAsync: boolean = false): Promise<unknown> | unknown {
     const maxBodySizeBytes = this.options?.maxBodySizeBytes;
     const buf = typeof input === "string" ? Buffer.from(input, "utf8") : input;
 
-    // Check body size limit
     if (
       typeof maxBodySizeBytes === "number" &&
       buf.byteLength > maxBodySizeBytes
     ) {
       const error = new BodyTooLargeError(maxBodySizeBytes);
-      this.invokeHandler(this.options?.onBodyTooLarge, error, isAsync);
-      this.invokeHandler(this.options?.onError, error, isAsync);
+      if (isAsync) {
+        return (async () => {
+          await this.invokeHandlerAsync(this.options?.onBodyTooLarge, error);
+          await this.invokeHandlerAsync(this.options?.onError, error);
+          throw error;
+        })();
+      }
+      this.invokeHandlerSync(this.options?.onBodyTooLarge, error);
+      this.invokeHandlerSync(this.options?.onError, error);
       throw error;
     }
 
     const jsonStr = buf.toString("utf-8");
     const cacheKey = buildCacheKey(jsonStr, this.options);
-    
-    // Try cache first (if enabled)
+
     if (this.options?.enableCache !== false) {
-      const cached = parseCache.get(cacheKey);
+      const cached = getParseCache().get(cacheKey);
       if (cached !== null) {
         return cached;
       }
     }
 
-    // Determine if we should use streaming for large payloads
+    if (isAsync) {
+      return this.parseAsync(buf, jsonStr, cacheKey);
+    }
+    return this.parseSync(buf, jsonStr, cacheKey);
+  }
+
+  private parseSync(buf: Buffer, jsonStr: string, cacheKey: string): unknown {
     const useStreaming = shouldUseStreamingForPayload(buf, this.options);
-    const lazyMode = this.options?.lazyMode === true;
-    const lazyModeThreshold = this.options?.lazyModeThreshold ?? 100 * 1024;
-    const enableFastPath = this.options?.enableFastPath === true;
+
+    if (this.options?.enableFastPath === true && !useStreaming) {
+      try {
+        const result = parseWithFastPath(jsonStr, this.options);
+        this.cacheResult(cacheKey, result);
+        return result;
+      } catch {
+        // Fall through to full parser
+      }
+    }
+
+    if (useStreaming) {
+      const parsed = JSON.parse(jsonStr);
+      this.cacheResult(cacheKey, parsed);
+      return parsed;
+    }
+
+    return this.fullParseSync(jsonStr, cacheKey);
+  }
+
+  private async parseAsync(buf: Buffer, jsonStr: string, cacheKey: string): Promise<unknown> {
+    const useStreaming = shouldUseStreamingForPayload(buf, this.options);
+
+    if (this.options?.enableFastPath === true && !useStreaming) {
+      try {
+        const result = parseWithFastPath(jsonStr, this.options);
+        this.cacheResult(cacheKey, result);
+        return result;
+      } catch {
+        // Fall through to full parser
+      }
+    }
+
+    if (useStreaming) {
+      const result = await parseLargePayload(buf, this.options);
+      this.cacheResult(cacheKey, result);
+      return result;
+    }
+
+    return this.fullParseAsync(jsonStr, cacheKey);
+  }
+
+  private fullParseSync(jsonStr: string, cacheKey: string): unknown {
+    const { effectiveOptions } = this.buildEffectiveOptions(jsonStr);
 
     try {
-      // Fast path for simple validation (if enabled)
-      if (enableFastPath && !useStreaming) {
-        try {
-          const result = parseWithFastPath(jsonStr, this.options);
-          // Cache the result
-          if (this.options?.enableCache !== false) {
-            parseCache.set(cacheKey, result);
-          }
-          return result;
-        } catch (fastPathError) {
-          // Fall back to full parser if fast path fails
-          // Continue to full parser below
-        }
-      }
-
-      // For large payloads with streaming enabled, use streaming parser
-      if (useStreaming) {
-        if (isAsync) {
-          return parseLargePayload(buf, this.options).then((result) => {
-            // Cache the result
-            if (this.options?.enableCache !== false) {
-              parseCache.set(cacheKey, result);
-            }
-            return result;
-          });
-        } else {
-          // Synchronous streaming is not possible, fall back to regular parser
-          // but with lazy mode optimizations
-          const parsed = JSON.parse(jsonStr);
-          
-          // Cache the result
-          if (this.options?.enableCache !== false) {
-            parseCache.set(cacheKey, parsed);
-          }
-          
-          return parsed;
-        }
-      }
-
-      // Auto-enable lazy mode for payloads above threshold (if lazyMode is not explicitly set)
-      const shouldUseLazyMode = lazyMode || (buf.length >= lazyModeThreshold);
-
-      // Prepare options with lazy mode settings if applicable
-      const effectiveOptions: StrictJsonOptions | undefined = shouldUseLazyMode ? {
-        ...this.options,
-        lazyMode: true,
-        lazyModeDepthLimit: this.options?.lazyModeDepthLimit ?? 10,
-        lazyModeSkipPrototype: this.options?.lazyModeSkipPrototype ?? true,
-        lazyModeSkipWhitelist: this.options?.lazyModeSkipWhitelist ?? true,
-        lazyModeSkipBlacklist: this.options?.lazyModeSkipBlacklist ?? false,
-      } : this.options;
-
-      // Check for duplicate keys, prototype pollution, depth limit, and whitelist/blacklist
       const duplicate = findDuplicateKeysInJson(jsonStr, effectiveOptions);
       if (duplicate) {
         const error = new DuplicateKeyError(duplicate.path, duplicate.key);
-        this.invokeHandler(this.options?.onDuplicateKey, error, isAsync);
-        this.invokeHandler(this.options?.onError, error, isAsync);
+        this.invokeHandlerSync(this.options?.onDuplicateKey, error);
+        this.invokeHandlerSync(this.options?.onError, error);
         throw error;
       }
 
       const parsed = JSON.parse(jsonStr);
-      
-      // Cache the result
-      if (this.options?.enableCache !== false) {
-        parseCache.set(cacheKey, parsed);
-      }
-
+      this.cacheResult(cacheKey, parsed);
       return parsed;
     } catch (e) {
-      // Handle prototype pollution errors thrown from findDuplicateInNode
       if (e instanceof PrototypePollutionError) {
-        this.invokeHandler(this.options?.onPrototypePollution, e, isAsync);
-        this.invokeHandler(this.options?.onError, e, isAsync);
+        this.invokeHandlerSync(this.options?.onPrototypePollution, e);
+        this.invokeHandlerSync(this.options?.onError, e);
         throw e;
       }
 
-      // Handle depth limit errors thrown from findDuplicateInNode
       if (e instanceof DepthLimitError) {
-        this.invokeHandler(this.options?.onError, e, isAsync);
+        this.invokeHandlerSync(this.options?.onError, e);
         throw e;
       }
 
-      // Handle custom errors that were already thrown
-      if (
-        e instanceof DuplicateKeyError ||
-        e instanceof BodyTooLargeError
-      ) {
-        // Error handlers already invoked above, just rethrow
+      if (e instanceof DuplicateKeyError || e instanceof BodyTooLargeError) {
         throw e;
       }
 
-      // Handle InvalidJsonError or other parsing errors
       if (e instanceof InvalidJsonError) {
-        this.invokeHandler(this.options?.onInvalidJson, e, isAsync);
-        this.invokeHandler(this.options?.onError, e, isAsync);
+        this.invokeHandlerSync(this.options?.onInvalidJson, e);
+        this.invokeHandlerSync(this.options?.onError, e);
         throw e;
       }
 
-      // Handle general JSON parse errors
       const error = new InvalidJsonError("Invalid JSON");
-      this.invokeHandler(this.options?.onInvalidJson, error, isAsync);
-      this.invokeHandler(this.options?.onError, error, isAsync);
+      this.invokeHandlerSync(this.options?.onInvalidJson, error);
+      this.invokeHandlerSync(this.options?.onError, error);
       throw error;
     }
   }
 
-  /**
-   * Invokes an error handler either synchronously or asynchronously.
-   *
-   * @param handler - The custom error handler function (optional)
-   * @param error - The error to pass to the handler
-   * @param isAsync - Whether to invoke the handler asynchronously
-   */
-  private invokeHandler(handler: unknown, error: unknown, isAsync: boolean): void {
-    if (isAsync) {
-      errorHandler.invokeAsync(handler as StrictJsonErrorHandler | undefined, error);
-    } else {
-      errorHandler.invokeSync(handler as StrictJsonErrorHandler | undefined, error);
+  private async fullParseAsync(jsonStr: string, cacheKey: string): Promise<unknown> {
+    const { effectiveOptions } = this.buildEffectiveOptions(jsonStr);
+
+    try {
+      const duplicate = findDuplicateKeysInJson(jsonStr, effectiveOptions);
+      if (duplicate) {
+        const error = new DuplicateKeyError(duplicate.path, duplicate.key);
+        await this.invokeHandlerAsync(this.options?.onDuplicateKey, error);
+        await this.invokeHandlerAsync(this.options?.onError, error);
+        throw error;
+      }
+
+      const parsed = JSON.parse(jsonStr);
+      this.cacheResult(cacheKey, parsed);
+      return parsed;
+    } catch (e) {
+      if (e instanceof PrototypePollutionError) {
+        await this.invokeHandlerAsync(this.options?.onPrototypePollution, e);
+        await this.invokeHandlerAsync(this.options?.onError, e);
+        throw e;
+      }
+
+      if (e instanceof DepthLimitError) {
+        await this.invokeHandlerAsync(this.options?.onError, e);
+        throw e;
+      }
+
+      if (e instanceof DuplicateKeyError || e instanceof BodyTooLargeError) {
+        throw e;
+      }
+
+      if (e instanceof InvalidJsonError) {
+        await this.invokeHandlerAsync(this.options?.onInvalidJson, e);
+        await this.invokeHandlerAsync(this.options?.onError, e);
+        throw e;
+      }
+
+      const error = new InvalidJsonError("Invalid JSON");
+      await this.invokeHandlerAsync(this.options?.onInvalidJson, error);
+      await this.invokeHandlerAsync(this.options?.onError, error);
+      throw error;
     }
+  }
+
+  private buildEffectiveOptions(jsonStr: string): { effectiveOptions: StrictJsonOptions | undefined } {
+    const lazyMode = this.options?.lazyMode === true;
+    const lazyModeThreshold = this.options?.lazyModeThreshold ?? 100 * 1024;
+    const shouldUseLazyMode = lazyMode || (Buffer.byteLength(jsonStr, 'utf8') >= lazyModeThreshold);
+
+    const effectiveOptions: StrictJsonOptions | undefined = shouldUseLazyMode ? {
+      ...this.options,
+      lazyMode: true,
+      lazyModeDepthLimit: this.options?.lazyModeDepthLimit ?? 10,
+      lazyModeSkipPrototype: this.options?.lazyModeSkipPrototype ?? true,
+      lazyModeSkipWhitelist: this.options?.lazyModeSkipWhitelist ?? true,
+      lazyModeSkipBlacklist: this.options?.lazyModeSkipBlacklist ?? false,
+    } : this.options;
+
+    return { effectiveOptions };
+  }
+
+  private cacheResult(cacheKey: string, result: unknown): void {
+    if (this.options?.enableCache !== false) {
+      getParseCache().set(cacheKey, result);
+    }
+  }
+
+  private invokeHandlerSync(handler: StrictJsonErrorHandler | undefined, error: unknown): void {
+    errorHandler.invokeSync(handler, error);
+  }
+
+  private invokeHandlerAsync(handler: StrictJsonErrorHandler | undefined, error: unknown): Promise<void> {
+    return errorHandler.invokeAsync(handler, error);
   }
 }
 
-/**
- * Synchronously parses a JSON string or buffer with strict validation.
- *
- * This function provides comprehensive JSON parsing with the following validations:
- * - Body size limit checking
- * - Duplicate key detection
- * - Prototype pollution protection
- * - Depth limit enforcement
- * - Whitelist/blacklist key validation
- * - Caching support (enabled by default)
- * - Fast path optimization (optional)
- * - Streaming support for large payloads (synchronous fallback)
- *
- * @param raw - The JSON string or buffer to parse
- * @param options - Strict JSON parsing options
- * @returns The parsed JSON object
- * @throws {BodyTooLargeError} When the input exceeds maxBodySizeBytes
- * @throws {DuplicateKeyError} When duplicate keys are detected
- * @throws {PrototypePollutionError} When prototype pollution is detected
- * @throws {DepthLimitError} When the maximum depth is exceeded
- * @throws {InvalidJsonError} When the JSON is invalid or violates whitelist/blacklist
- *
- * @example
- * ```ts
- * const result = parseStrictJson('{"name": "John"}');
- * const resultWithCache = parseStrictJson('{"name": "John"}', { enableCache: true });
- * const resultWithProtection = parseStrictJson('{"name": "John"}', { 
- *   enablePrototypePollutionProtection: true 
- * });
- * ```
- */
 export function parseStrictJson(
   raw: string | Buffer,
   options?: StrictJsonOptions,
@@ -257,31 +233,6 @@ export function parseStrictJson(
   return new JsonParser(options).parse(raw, false);
 }
 
-/**
- * Asynchronously parses a JSON string or buffer with strict validation.
- *
- * This function provides the same comprehensive JSON parsing validation as
- * parseStrictJson, but with full async support for error handlers. It also
- * supports true streaming for large payloads.
- *
- * @param raw - The JSON string or buffer to parse
- * @param options - Strict JSON parsing options
- * @returns A promise that resolves to the parsed JSON object
- * @throws {BodyTooLargeError} When the input exceeds maxBodySizeBytes
- * @throws {DuplicateKeyError} When duplicate keys are detected
- * @throws {PrototypePollutionError} When prototype pollution is detected
- * @throws {DepthLimitError} When the maximum depth is exceeded
- * @throws {InvalidJsonError} When the JSON is invalid or violates whitelist/blacklist
- *
- * @example
- * ```ts
- * const result = await parseStrictJsonAsync('{"name": "John"}');
- * const resultWithStreaming = await parseStrictJsonAsync(largeBuffer, { 
- *   enableStreaming: true,
- *   streamingThreshold: 1024 * 1024 // 1MB
- * });
- * ```
- */
 export async function parseStrictJsonAsync(
   raw: string | Buffer,
   options?: StrictJsonOptions,

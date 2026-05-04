@@ -32,8 +32,8 @@ export function runBenchmark(
   }
 
   // Force garbage collection if available
-  if (global.gc) {
-    global.gc();
+  if (globalThis.gc) {
+    globalThis.gc();
   }
 
   // Measure memory before
@@ -101,8 +101,8 @@ export async function runAsyncBenchmark(
   }
 
   // Force garbage collection if available
-  if (global.gc) {
-    global.gc();
+  if (globalThis.gc) {
+    globalThis.gc();
   }
 
   // Measure memory before
@@ -148,13 +148,13 @@ export async function runAsyncBenchmark(
  * Клас для запуску набору бенчмарків
  */
 export class BenchmarkSuite {
-  private benchmarks: Array<{
+  private readonly benchmarks: Array<{
     name: string;
     implementation: string;
     fn: BenchmarkFn;
     iterations?: number;
   }> = [];
-  private asyncBenchmarks: Array<{
+  private readonly asyncBenchmarks: Array<{
     name: string;
     implementation: string;
     fn: () => Promise<void>;
@@ -335,7 +335,7 @@ export async function runAllBenchmarks(): Promise<BenchmarkResult[]> {
  * Вимірює пікове споживання пам'яті
  */
 export function measurePeakMemory(fn: BenchmarkFn): number {
-  if (!global.gc) {
+  if (!globalThis.gc) {
     console.warn('Garbage collection not available. Run with --expose-gc for accurate memory measurements.');
   }
 

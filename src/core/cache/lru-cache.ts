@@ -21,7 +21,7 @@ const DEFAULT_CACHE_SIZE = 1000; // Максимально 1000 кешовани
  * ```
  */
 export class LRUCache<K = string, V = unknown> implements ICache<K, V> {
-  private cache: Map<K, { value: V; timestamp: number }>;
+  private readonly cache: Map<K, { value: V; timestamp: number }>;
   private _maxSize: number;
   private _ttl: number;
 

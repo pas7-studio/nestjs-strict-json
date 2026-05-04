@@ -9,7 +9,7 @@
  * - Integration tests: caching with parseStrictJson
  */
 
-import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import { LRUCache, DEFAULT_CACHE_TTL, DEFAULT_CACHE_SIZE } from '../src/core/cache/lru-cache.js';
 import { NoCache } from '../src/core/cache/no-cache.js';
 import { createCache } from '../src/core/cache/cache-factory.js';
@@ -847,7 +847,7 @@ describe('Edge Cases and Error Handling', () => {
   it('LRUCache обробляє великі об\'єкти', () => {
     const cache = new LRUCache<string, any>(10, 60000);
     
-    const largeObj = { data: Array(1000).fill('test') };
+    const largeObj = { data: new Array(1000).fill('test') };
     cache.set('large', largeObj);
     
     const result = cache.get('large');
@@ -874,12 +874,12 @@ describe('Edge Cases and Error Handling', () => {
 
   it('buildCacheKey обробляє undefined options', () => {
     const json = '{"test": "data"}';
-    const key = buildCacheKey(json, undefined);
+    const key = buildCacheKey(json);
     
     // Хеш має бути 64-символьним hex рядком (SHA-256)
     expect(key).toMatch(/^[a-f0-9]{64}$/i);
     // Хеш має бути детермінованим (однаковий для однакового вхідного)
-    const key2 = buildCacheKey(json, undefined);
+    const key2 = buildCacheKey(json);
     expect(key).toBe(key2);
     // Хеш має бути однаковим, як при виклику без параметра options
     const key3 = buildCacheKey(json);

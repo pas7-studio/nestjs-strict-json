@@ -38,107 +38,136 @@ export const findDuplicateInNode = (
   options?: StrictJsonOptions,
   depth = 0
 ): Duplicate | DangerousKey => {
-  // Lazy mode configuration
+  const config = extractTraversalConfig(options);
+
+  const stack: StackFrame[] = [
+    { node, path, depth, seenKeys: new Set<string>() }
+  ];
+
+  while (stack.length > 0) {
+    const frame = stack.pop()!;
+    
+    if (frame.depth > config.effectiveDepthLimit) {
+      throw new DepthLimitError(frame.depth, config.effectiveDepthLimit);
+    }
+
+    if (frame.node.type === "object") {
+      const duplicate = processObjectNode(stack, frame, config, options);
+      if (duplicate) return duplicate;
+    } else if (frame.node.type === "array") {
+      processArrayNode(stack, frame);
+    }
+  }
+
+  return null;
+};
+
+interface TraversalConfig {
+  lazyMode: boolean;
+  shouldCheckPrototype: boolean;
+  shouldValidateKeyPolicy: boolean;
+  dangerousKeysSet: Set<string>;
+  effectiveDepthLimit: number;
+}
+
+function extractTraversalConfig(options?: StrictJsonOptions): TraversalConfig {
   const lazyMode = options?.lazyMode === true;
   const lazyModeDepthLimit = options?.lazyModeDepthLimit ?? 10;
   const lazyModeSkipPrototype = options?.lazyModeSkipPrototype ?? true;
   const lazyModeSkipWhitelist = options?.lazyModeSkipWhitelist ?? true;
   const lazyModeSkipBlacklist = options?.lazyModeSkipBlacklist ?? false;
 
-  // Regular configuration
   const maxDepth = options?.maxDepth ?? 20;
-  
-  // Pre-compute frequently used values for better performance
   const enablePrototypeProtection = options?.enablePrototypePollutionProtection !== false;
-  const shouldCheckPrototype = enablePrototypeProtection && 
-    !(lazyMode && lazyModeSkipPrototype);
-  
-  // Use Set for O(1) lookup instead of Array.includes O(n)
+  const shouldCheckPrototype = enablePrototypeProtection && !(lazyMode && lazyModeSkipPrototype);
+
   const dangerousKeysSet = shouldCheckPrototype
     ? new Set(options?.dangerousKeys || ['__proto__', 'constructor', 'prototype'])
     : new Set<string>();
-  
-  // Pre-compute whitelist/blacklist check to avoid repeated property access
-  const hasWhitelistOrBlacklist = options?.whitelist !== undefined || options?.blacklist !== undefined;
-  const shouldCheckWhitelist = hasWhitelistOrBlacklist &&
-    !(lazyMode && lazyModeSkipWhitelist);
-  const shouldCheckBlacklist = hasWhitelistOrBlacklist && 
-    !(lazyMode && lazyModeSkipBlacklist);
-  const shouldValidateKeyPolicy = shouldCheckWhitelist || shouldCheckBlacklist;
 
-  // Determine effective depth limit (lazy mode or normal mode)
+  const hasWhitelistOrBlacklist = options?.whitelist !== undefined || options?.blacklist !== undefined;
+  const shouldCheckWhitelist = hasWhitelistOrBlacklist && !(lazyMode && lazyModeSkipWhitelist);
+  const shouldCheckBlacklist = hasWhitelistOrBlacklist && !(lazyMode && lazyModeSkipBlacklist);
+  const shouldValidateKeyPolicy = shouldCheckWhitelist || shouldCheckBlacklist;
   const effectiveDepthLimit = lazyMode ? Math.min(maxDepth, lazyModeDepthLimit) : maxDepth;
 
-  // Use stack for iterative traversal instead of recursion
-  const stack: StackFrame[] = [
-    { node, path, depth, seenKeys: new Set<string>() }
-  ];
+  return {
+    lazyMode,
+    shouldCheckPrototype,
+    shouldValidateKeyPolicy,
+    dangerousKeysSet,
+    effectiveDepthLimit,
+  };
+}
 
-  while (stack.length > 0) {
-    const { node: currentNode, path: currentPath, depth: currentDepth, seenKeys: currentSeenKeys } = stack.pop()!;
-    
-    // Check depth limit
-    if (currentDepth > effectiveDepthLimit) {
-      throw new DepthLimitError(currentDepth, effectiveDepthLimit);
+function processObjectNode(
+  stack: StackFrame[],
+  frame: StackFrame,
+  config: TraversalConfig,
+  options?: StrictJsonOptions,
+): Duplicate {
+  const { node: currentNode, path: currentPath, depth: currentDepth, seenKeys: currentSeenKeys } = frame;
+  const children = currentNode.children?.length ?? 0;
+
+  for (let i = children - 1; i >= 0; i--) {
+    const prop = currentNode.children?.[i];
+    if (prop?.type !== "property" || !prop.children || prop.children.length < 2) continue;
+
+    const [keyNode, valueNode] = prop.children;
+    const key = String(keyNode.value ?? "");
+    const keyPath = `${currentPath}.${key}`;
+
+    validateKeyForNode(key, keyPath, config, options);
+
+    if (currentSeenKeys.has(key)) {
+      return { key, path: keyPath };
     }
+    currentSeenKeys.add(key);
 
-    // Process object nodes
-    if (currentNode.type === "object") {
-      for (let i = (currentNode.children?.length ?? 0) - 1; i >= 0; i--) {
-        const prop = currentNode.children?.[i];
-        if (prop?.type !== "property" || !prop.children || prop.children.length < 2)
-          continue;
-
-        const [keyNode, valueNode] = prop.children;
-        const key = String(keyNode.value ?? "");
-        const keyPath = `${currentPath}.${key}`;
-
-        // Enforce whitelist/blacklist policy when enabled.
-        if (shouldValidateKeyPolicy) {
-          if (!isKeyAllowed(keyPath, options?.whitelist, options?.blacklist)) {
-            throw new InvalidJsonError(`Key '${key}' at ${keyPath} is not allowed`);
-          }
-        }
-
-        // Check for prototype pollution (if enabled and not skipped)
-        if (shouldCheckPrototype && dangerousKeysSet.has(key)) {
-          throw new PrototypePollutionError(key, keyPath);
-        }
-
-        // Check for duplicate keys (always critical!)
-        if (currentSeenKeys.has(key)) {
-          return { key, path: keyPath };
-        }
-        currentSeenKeys.add(key);
-
-        // Add nested objects/arrays to stack
-        stack.push({
-          node: valueNode,
-          path: keyPath,
-          depth: currentDepth + 1,
-          seenKeys: new Set<string>(),
-        });
-      }
-    }
-    
-    // Process array nodes
-    else if (currentNode.type === "array") {
-      for (let i = (currentNode.children?.length ?? 0) - 1; i >= 0; i--) {
-        const child = currentNode.children?.[i];
-        if (!child) continue;
-        
-        stack.push({
-          node: child,
-          path: `${currentPath}[${i}]`,
-          depth: currentDepth + 1,
-          seenKeys: new Set<string>(),
-        });
-      }
-    }
+    stack.push({
+      node: valueNode,
+      path: keyPath,
+      depth: currentDepth + 1,
+      seenKeys: new Set<string>(),
+    });
   }
 
   return null;
-};
+}
+
+function processArrayNode(stack: StackFrame[], frame: StackFrame): void {
+  const { node: currentNode, path: currentPath, depth: currentDepth } = frame;
+  const children = currentNode.children?.length ?? 0;
+
+  for (let i = children - 1; i >= 0; i--) {
+    const child = currentNode.children?.[i];
+    if (!child) continue;
+
+    stack.push({
+      node: child,
+      path: `${currentPath}[${i}]`,
+      depth: currentDepth + 1,
+      seenKeys: new Set<string>(),
+    });
+  }
+}
+
+function validateKeyForNode(
+  key: string,
+  keyPath: string,
+  config: TraversalConfig,
+  options?: StrictJsonOptions,
+): void {
+  if (config.shouldValidateKeyPolicy) {
+    if (!isKeyAllowed(keyPath, options?.whitelist, options?.blacklist)) {
+      throw new InvalidJsonError(`Key '${key}' at ${keyPath} is not allowed`);
+    }
+  }
+
+  if (config.shouldCheckPrototype && config.dangerousKeysSet.has(key)) {
+    throw new PrototypePollutionError(key, keyPath);
+  }
+}
 
 /**
  * Parses a JSON string and checks for duplicate keys and other issues.
@@ -170,7 +199,6 @@ export const findDuplicateKeysInJson = (
   try {
     return findDuplicateInNode(root, "$", options) as Duplicate;
   } catch (e) {
-    // Re-throw custom errors - they'll be caught by parseStrictJson
     if (
       e instanceof PrototypePollutionError ||
       e instanceof DepthLimitError ||

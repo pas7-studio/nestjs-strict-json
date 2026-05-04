@@ -58,9 +58,9 @@ export async function parseLargePayload(buffer: Buffer, options?: StrictJsonOpti
       let strictError: Error = error;
       
       // Check for duplicate key error from streaming parser
+      const duplicateKeyRegex = /Duplicate key '([^']+)' at (.+)/;
       if (error.message.includes("Duplicate key '")) {
-        // Extract key and path from error message
-        const match = error.message.match(/Duplicate key '([^']+)' at (.+)/);
+        const match = duplicateKeyRegex.exec(error.message);
         if (match) {
           const key = match[1];
           const path = match[2];

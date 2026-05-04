@@ -25,7 +25,7 @@ function normalizeKeyForPatternMatching(key: string): string {
 
   // Замінюємо індекси масивів [0], [1], [2], тощо на [*]
   // Обробляємо вкладені структури масивів як users[0].profile[0].age
-  normalized = normalized.replace(/\[\d+\]/g, '[*]');
+  normalized = normalized.replaceAll(/\[\d+\]/g, '[*]');
 
   return normalized;
 }

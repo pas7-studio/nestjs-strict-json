@@ -46,8 +46,8 @@ function getConfigHash(
   ignoreCase?: boolean
 ): string {
   // Сортуємо масиви для консистентного хешування
-  const sortedWhitelist = whitelist ? [...whitelist].sort() : undefined;
-  const sortedBlacklist = blacklist ? [...blacklist].sort() : undefined;
+  const sortedWhitelist = whitelist ? [...whitelist].sort((a, b) => a.localeCompare(b)) : undefined;
+  const sortedBlacklist = blacklist ? [...blacklist].sort((a, b) => a.localeCompare(b)) : undefined;
   
   return JSON.stringify({
     whitelist: sortedWhitelist,

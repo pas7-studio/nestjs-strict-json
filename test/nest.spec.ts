@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { Test, TestingModule, Injectable } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import {
@@ -7,7 +7,6 @@ import {
   StrictJsonCacheService,
   STRICT_JSON_OPTIONS,
   STRICT_JSON_CACHE,
-  NEST_APP,
 } from '../src/nest/index.js';
 import type { ICache } from '../src/core/cache/index.js';
 
@@ -353,13 +352,13 @@ describe('StrictJsonCacheService - integration', () => {
   });
 
   it('should clear cache through service', () => {
-    (mockCache.size as number) = 5;
+    mockCache.size = 5;
     cacheService.clear();
     expect(mockCache.clear).toHaveBeenCalled();
   });
 
   it('should return cache size through service', () => {
-    (mockCache.size as number) = 3;
+    mockCache.size = 3;
     const size = cacheService.getSize();
     expect(size).toBe(3);
   });
@@ -563,13 +562,13 @@ describe('StrictJsonCacheService - complete coverage', () => {
   });
 
   it('should return correct size from cache', () => {
-    (mockCache.size as number) = 100;
+    mockCache.size = 100;
     const result = cacheService.getSize();
     expect(result).toBe(100);
   });
 
   it('should return correct maxSize from cache', () => {
-    (mockCache.maxSize as number) = 5000;
+    mockCache.maxSize = 5000;
     const result = cacheService.getMaxSize();
     expect(result).toBe(5000);
   });

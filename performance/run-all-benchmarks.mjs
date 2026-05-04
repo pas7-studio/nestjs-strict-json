@@ -4,9 +4,9 @@
  * Скрипт для запуску всіх бенчмарків
  */
 
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import * as path from 'path';
+import { exec } from 'node:child_process';
+import { promisify } from 'node:util';
+import * as path from 'node:path';
 
 const execAsync = promisify(exec);
 

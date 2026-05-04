@@ -73,7 +73,7 @@ describe("Custom Error Handlers", () => {
     try {
       await parseStrictJsonAsync('{"user": "John", "user": "Jane"}', { onError: handler });
       expect.fail("Should have thrown an error");
-    } catch (error) {
+    } catch {
       expect(handler).toHaveBeenCalled();
     }
 
@@ -83,7 +83,7 @@ describe("Custom Error Handlers", () => {
     try {
       await parseStrictJsonAsync('{"__proto__": {"isAdmin": true}}', { onError: handler });
       expect.fail("Should have thrown an error");
-    } catch (error) {
+    } catch {
       expect(handler).toHaveBeenCalled();
     }
   });
@@ -98,7 +98,7 @@ describe("Custom Error Handlers", () => {
     try {
       await parseStrictJsonAsync(json, { onDuplicateKey: handler });
       expect.fail("Should have thrown an error");
-    } catch (error) {
+    } catch {
       expect(handler).toHaveBeenCalled();
       expect(handler).toHaveBeenCalledTimes(1);
     }
@@ -115,7 +115,7 @@ describe("Custom Error Handlers", () => {
         onError: genericHandler
       });
       expect.fail("Should have thrown an error");
-    } catch (error) {
+    } catch {
       expect(specificHandler).toHaveBeenCalled();
       expect(genericHandler).toHaveBeenCalled();
       expect(specificHandler).toHaveBeenCalledTimes(1);
@@ -130,7 +130,7 @@ describe("Custom Error Handlers", () => {
     try {
       await parseStrictJsonAsync(json, { onDuplicateKey: handler });
       expect.fail("Should have thrown an error");
-    } catch (error) {
+    } catch {
       // Handler was called, error was still thrown
       expect(handler).toHaveBeenCalled();
     }
@@ -146,7 +146,7 @@ describe("Custom Error Handlers", () => {
     for (const json of errors) {
       try {
         await parseStrictJsonAsync(json, { onError: handler });
-      } catch (error) {
+      } catch {
         // Expected
       }
     }
@@ -161,7 +161,7 @@ describe("Custom Error Handlers", () => {
     try {
       await parseStrictJsonAsync(json, { onDuplicateKey: handler });
       expect.fail("Should have thrown an error");
-    } catch (error) {
+    } catch {
       expect(handler).toHaveBeenCalled();
     }
   });
@@ -176,7 +176,7 @@ describe("Custom Error Handlers", () => {
     try {
       await parseStrictJsonAsync(json, { onDuplicateKey: handler });
       expect.fail("Should have thrown an error");
-    } catch (error) {
+    } catch {
       expect(called).toBe(true);
       expect(handler).toHaveBeenCalled();
     }
@@ -226,7 +226,7 @@ describe("Custom Error Handlers", () => {
     try {
       await parseStrictJson(json, { onDuplicateKey: duplicateHandler });
       expect.fail("Should have thrown an error");
-    } catch (error) {
+    } catch {
       expect(duplicateHandler).toHaveBeenCalled();
     }
   });
