@@ -34,8 +34,8 @@ jobs:
       - name: Type check
         run: pnpm typecheck
 
-      - name: Test
-        run: pnpm test
+      - name: Test with coverage
+        run: npx vitest run --coverage
 
       - name: E2E Test
         run: pnpm test:e2e
