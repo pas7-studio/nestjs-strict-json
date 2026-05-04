@@ -313,7 +313,7 @@ describe('Duplicate Key Detection Benchmarks', () => {
       items: Array.from({ length: 1000 }, (_, i) => ({
         id: i,
         name: `Item ${i}`,
-        value: Math.random()
+        value: ((i % 10000) / 10000)
       }))
     });
 
@@ -322,7 +322,7 @@ describe('Duplicate Key Detection Benchmarks', () => {
         id: i,
         name: `Item ${i}`,
         duplicateName: `Duplicate ${i}`, // Duplicate at every level
-        value: Math.random()
+        value: ((i % 10000) / 10000)
       }))
     });
 

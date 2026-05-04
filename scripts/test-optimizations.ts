@@ -13,7 +13,7 @@ function generateLargePayload(sizeInBytes: number): string {
     items.push({
       id: i,
       name: `Item ${i}`,
-      value: Math.random() * 1000,
+      value: ((i + 1) % ),
       nested: {
         field1: `data1_${i}`,
         field2: `data2_${i}`,

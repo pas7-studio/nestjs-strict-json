@@ -2,6 +2,7 @@ import express, { Request, Response } from "express";
 import { createStrictJsonExpressMiddleware } from "../src/index.js";
 
 const app = express();
+app.disable('x-powered-by');
 
 /**
  * Example 1: Basic usage with streaming enabled

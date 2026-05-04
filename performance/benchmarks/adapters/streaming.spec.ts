@@ -338,7 +338,7 @@ describe('Streaming Parser Benchmarks', () => {
       items: Array.from({ length: 20000 }, (_, i) => ({
         id: i,
         name: `Extra Large Item ${i}`.repeat(10),
-        data: { value: Math.random() }
+        data: { value: ((i % 10000) / 10000) }
       }))
     });
 

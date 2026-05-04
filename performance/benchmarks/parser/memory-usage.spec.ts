@@ -19,7 +19,7 @@ describe('Memory Usage Benchmarks', () => {
     items: Array.from({ length: 1000 }, (_, i) => ({
       id: i,
       name: `Item ${i}`,
-      value: Math.random(),
+      value: ((i % 10000) / 10000),
       data: { field: `value${i}` }
     }))
   });
@@ -28,7 +28,7 @@ describe('Memory Usage Benchmarks', () => {
     items: Array.from({ length: 10000 }, (_, i) => ({
       id: i,
       name: `Item ${i}`.repeat(10),
-      value: Math.random(),
+      value: ((i % 10000) / 10000),
       nested: {
         level1: { level2: { level3: `data${i}`.repeat(5) } },
         array: Array.from({ length: 10 }, (_, j) => `item${j}`)
@@ -372,9 +372,9 @@ describe('Memory Usage Benchmarks', () => {
     const numericJson = toJsonString({
       items: Array.from({ length: 1000 }, (_, i) => ({
         id: i,
-        value1: Math.random() * 1000,
-        value2: Math.random() * 10000,
-        value3: Math.random() * 100000
+        value1: ((i + 1) % ),
+        value2: ((i + 1) % ),
+        value3: ((i + 1) % )
       }))
     });
 

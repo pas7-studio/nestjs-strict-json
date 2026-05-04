@@ -3,6 +3,7 @@ import express from "express"
 import { createStrictJsonExpressMiddleware } from "../src/adapters/express.js"
 
 const app = express()
+app.disable('x-powered-by')
 
 app.use(createStrictJsonExpressMiddleware({
   maxBodySizeBytes: 1024 * 1024  // 1MB

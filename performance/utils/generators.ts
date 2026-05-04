@@ -1,3 +1,7 @@
+function seededValue(i: number, offset: number): number {
+  return ((i * 2654435761 + offset) >>> 0) % 10000 / 10000;
+}
+
 /**
  * Генератори тестових даних для бенчмарків
  */
@@ -31,20 +35,21 @@ export function generateSmallJson(): object {
  */
 export function generateMediumJson(): object {
   const items = [];
+  const categories = ['electronics', 'clothing', 'food', 'books'];
   for (let i = 0; i < 1000; i++) {
     items.push({
       id: i,
       name: `Item ${i}`,
       description: `This is a description for item ${i}`.repeat(10),
-      price: Math.random() * 1000,
-      inStock: Math.random() > 0.1,
-      category: ['electronics', 'clothing', 'food', 'books'][Math.floor(Math.random() * 4)],
-      tags: [`tag${Math.floor(Math.random() * 10)}`, `tag${Math.floor(Math.random() * 10)}`],
-      createdAt: new Date(Date.now() - Math.random() * 10000000000).toISOString(),
+      price: seededValue(i, 1) * 1000,
+      inStock: seededValue(i, 2) > 0.1,
+      category: categories[i % 4],
+      tags: [`tag${i % 10}`, `tag${(i + 3) % 10}`],
+      createdAt: new Date(Date.now() - seededValue(i, 3) * 10000000000).toISOString(),
       metadata: {
-        views: Math.floor(Math.random() * 10000),
-        likes: Math.floor(Math.random() * 1000),
-        rating: (Math.random() * 5).toFixed(2)
+        views: (seededValue(i, 4) * 10000) | 0,
+        likes: (seededValue(i, 5) * 1000) | 0,
+        rating: (seededValue(i, 6) * 5).toFixed(2)
       }
     });
   }
@@ -56,33 +61,35 @@ export function generateMediumJson(): object {
  */
 export function generateLargeJson(): object {
   const items = [];
+  const categories = ['electronics', 'clothing', 'food', 'books', 'toys', 'sports'];
+  const materials = ['plastic', 'metal', 'wood', 'fabric'];
   for (let i = 0; i < 10000; i++) {
     items.push({
       id: i,
       name: `Large Item ${i}`,
       description: `This is a longer description for item ${i}`.repeat(50),
-      price: Math.random() * 10000,
-      inStock: Math.random() > 0.1,
-      category: ['electronics', 'clothing', 'food', 'books', 'toys', 'sports'][Math.floor(Math.random() * 6)],
-      tags: Array.from({ length: 5 }, () => `tag${Math.floor(Math.random() * 20)}`),
-      createdAt: new Date(Date.now() - Math.random() * 100000000000).toISOString(),
-      updatedAt: new Date(Date.now() - Math.random() * 100000000000).toISOString(),
+      price: seededValue(i, 1) * 10000,
+      inStock: seededValue(i, 2) > 0.1,
+      category: categories[i % 6],
+      tags: Array.from({ length: 5 }, (_, j) => `tag${(i + j * 7) % 20}`),
+      createdAt: new Date(Date.now() - seededValue(i, 3) * 100000000000).toISOString(),
+      updatedAt: new Date(Date.now() - seededValue(i, 4) * 100000000000).toISOString(),
       metadata: {
-        views: Math.floor(Math.random() * 100000),
-        likes: Math.floor(Math.random() * 10000),
-        rating: (Math.random() * 5).toFixed(2),
-        reviews: Math.floor(Math.random() * 500),
-        purchased: Math.floor(Math.random() * 1000),
-        featured: Math.random() > 0.9
+        views: (seededValue(i, 5) * 100000) | 0,
+        likes: (seededValue(i, 6) * 10000) | 0,
+        rating: (seededValue(i, 7) * 5).toFixed(2),
+        reviews: (seededValue(i, 8) * 500) | 0,
+        purchased: (seededValue(i, 9) * 1000) | 0,
+        featured: seededValue(i, 10) > 0.9
       },
       specifications: {
-        weight: (Math.random() * 10).toFixed(2),
+        weight: (seededValue(i, 11) * 10).toFixed(2),
         dimensions: {
-          length: Math.floor(Math.random() * 100),
-          width: Math.floor(Math.random() * 100),
-          height: Math.floor(Math.random() * 100)
+          length: (seededValue(i, 12) * 100) | 0,
+          width: (seededValue(i, 13) * 100) | 0,
+          height: (seededValue(i, 14) * 100) | 0
         },
-        material: ['plastic', 'metal', 'wood', 'fabric'][Math.floor(Math.random() * 4)]
+        material: materials[i % 4]
       }
     });
   }
@@ -94,16 +101,15 @@ export function generateLargeJson(): object {
  * Примітка: Це створює рядок JSON з дублікатними ключами, які не можна представити як об'єкт JS
  */
 export function generateJsonWithDuplicates(): string {
-  // Створюємо вручну рядок JSON з дублікатними ключами
   let jsonStr = `{\n`;
   jsonStr += `  "id": 1,\n`;
   jsonStr += `  "name": "Test",\n`;
-  jsonStr += `  "name": "Duplicate Name",\n`; // Дублікат
+  jsonStr += `  "name": "Duplicate Name",\n`;
   jsonStr += `  "email": "test@example.com",\n`;
-  jsonStr += `  "email": "duplicate@example.com",\n`; // Дублікат
+  jsonStr += `  "email": "duplicate@example.com",\n`;
   jsonStr += `  "nested": {\n`;
   jsonStr += `    "key1": "value1",\n`;
-  jsonStr += `    "key1": "value1-duplicate",\n`; // Дублікат
+  jsonStr += `    "key1": "value1-duplicate",\n`;
   jsonStr += `    "key2": "value2"\n`;
   jsonStr += `  },\n`;
   jsonStr += `  "active": true\n`;
@@ -133,7 +139,6 @@ export function generateWhitelistTestJson(): object {
     id: 1,
     name: 'Allowed Field',
     email: 'test@example.com',
-    // Ці поля не будуть у whitelist
     password: 'secret123',
     secretToken: 'abc123def456',
     internalData: {
@@ -147,7 +152,6 @@ export function generateWhitelistTestJson(): object {
  * Генерує JSON для тестування prototype pollution
  */
 export function generatePrototypePollutionJson(): string {
-  // Створюємо рядок JSON з prototype pollution
   return JSON.stringify({
     __proto__: { polluted: true },
     constructor: { prototype: { polluted: true } },
@@ -163,7 +167,7 @@ export function generateJsonArray(size: number): object[] {
   for (let i = 0; i < size; i++) {
     array.push({
       id: i,
-      value: Math.random(),
+      value: seededValue(i, 0),
       name: `Item ${i}`
     });
   }
