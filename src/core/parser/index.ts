@@ -135,6 +135,7 @@ class JsonParser {
       } else if (e instanceof DepthLimitError) {
         invoke(this.options?.onError, e);
       } else if (e instanceof DuplicateKeyError || e instanceof BodyTooLargeError) {
+        // No handler invocation for these errors
       } else if (e instanceof InvalidJsonError) {
         invoke(this.options?.onInvalidJson, e);
         invoke(this.options?.onError, e);
