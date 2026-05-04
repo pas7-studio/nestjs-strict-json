@@ -24,7 +24,16 @@ export type {
   StrictJsonOptions,
   StrictJsonErrorDetails,
   StrictJsonErrorCode,
+  StrictJsonErrorHandler,
 } from "./core/types.js";
+export type {
+  ParserOptions,
+  CacheOptions,
+  StreamingOptions,
+  LazyOptions,
+  FilteringOptions,
+  ErrorHandlerOptions,
+} from "./core/options/index.js";
 export {
   globToRegex,
   matchGlobPattern,

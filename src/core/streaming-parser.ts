@@ -113,10 +113,8 @@ export class StreamingJsonParser extends Transform {
       this.state.completed = true;
       // Emit error event first
       this.emit('error', error);
-      // Then destroy the stream to prevent further processing
-      this.destroy(error);
+      this.destroy(error as Error);
       
-      // Pass error to callback to ensure it's reported properly
       callback(error as Error);
     }
   }

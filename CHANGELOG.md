@@ -5,6 +5,63 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2026-05-04
+
+### Overview
+
+First stable release. The API is battle-tested with 551 tests, zero SonarQube issues, and full compatibility with the latest major versions of NestJS, Express, Fastify, TypeScript, and Vitest.
+
+### Breaking Changes
+
+None. Fully backward compatible with v0.5.x.
+
+### Security
+
+- Resolved all 69 SonarCloud Security Hotspots
+  - Replaced `Math.random()` with deterministic seeded values across generators and benchmarks
+  - Pinned GitHub Actions dependencies to full commit SHAs
+  - Disabled `X-Powered-By` header in Express examples
+- Zero SonarQube bugs, vulnerabilities, and code smells
+- SonarCloud Quality Gate passing with A ratings across Security, Reliability, and Maintainability
+
+### Performance
+
+- Lazy cache key computation — SHA-256 hash skipped when caching is disabled
+- Deduplicated `fullParseSync`/`fullParseAsync` into a single `fullParse()` method (~40% less code in hot path)
+- Removed function references from `buildCacheKey` normalized options
+
+### New Exports
+
+- `ParserOptions`, `CacheOptions`, `StreamingOptions`, `LazyOptions`, `FilteringOptions`, `ErrorHandlerOptions` — individual option type interfaces for ISP-style imports
+- `StrictJsonErrorHandler` — error handler type
+
+### Dependency Updates
+
+| Package | Before | After |
+|---------|--------|-------|
+| TypeScript | 5.9.x | 6.0.3 |
+| Vitest | 2.1.x | 4.1.5 |
+| Vite | — | 8.0.10 |
+| ESLint | 8.57.x | 10.3.0 |
+| @typescript-eslint | 7.18.x | 8.59.1 |
+| NestJS | 10.4.x | 11.1.19 |
+| Express | 4.22.x | 5.2.1 |
+| Fastify | 4.29.x | 5.8.5 |
+| @types/node | 20.x | 25.6.0 |
+
+### Build & Tooling
+
+- `tsconfig.json`: target ES2022, added `lib: ["ES2022"]`, `types: ["node"]`, removed deprecated `baseUrl`
+- Vitest 4: migrated `poolOptions.forks.singleFork` to top-level `singleFork`
+- SonarCloud: configured coverage reporting (lcov), CPD exclusions for test/perf/examples, added badges
+
+### Tests
+
+- 551 tests passing (0 failures)
+- 7 e2e tests passing
+- TypeScript typecheck clean
+- ESLint clean
+
 ## [0.5.0] - 2025-01-23
 
 ### 🎯 Overview
@@ -43,6 +100,7 @@ This release delivers **massive performance improvements** and critical bug fixe
 ### 🔧 Breaking Changes
 None - fully backward compatible.
 
+[1.0.0]: https://github.com/pas7-studio/nestjs-strict-json/releases/tag/v1.0.0
 [0.5.0]: https://github.com/pas7-studio/nestjs-strict-json/releases/tag/v0.5.0
 
 ---

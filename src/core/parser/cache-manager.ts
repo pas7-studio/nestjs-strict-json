@@ -176,48 +176,26 @@ export function buildCacheKey(jsonStr: string, options?: StrictJsonOptions): str
   // Normalize and include all options that affect parsing behavior
   // This ensures different option configurations produce different cache entries
   const normalizedOptions = {
-    // Depth-related options
     maxDepth: options.maxDepth,
-    
-    // Security options
     enablePrototypePollutionProtection: options.enablePrototypePollutionProtection,
     dangerousKeys: options.dangerousKeys,
-    
-    // Filtering options
     whitelist: options.whitelist,
     blacklist: options.blacklist,
     ignoreCase: options.ignoreCase,
-    
-    // Streaming options
     enableStreaming: options.enableStreaming,
     streamingThreshold: options.streamingThreshold,
     chunkSize: options.chunkSize,
-    
-    // Lazy mode options
     lazyMode: options.lazyMode,
     lazyModeThreshold: options.lazyModeThreshold,
     lazyModeDepthLimit: options.lazyModeDepthLimit,
     lazyModeSkipPrototype: options.lazyModeSkipPrototype,
     lazyModeSkipWhitelist: options.lazyModeSkipWhitelist,
     lazyModeSkipBlacklist: options.lazyModeSkipBlacklist,
-    
-    // Performance options
     enableFastPath: options.enableFastPath,
-    
-    // Size limits
     maxBodySizeBytes: options.maxBodySizeBytes,
-    
-    // Cache options
     enableCache: options.enableCache,
     cacheSize: options.cacheSize,
     cacheTTL: options.cacheTTL,
-    
-    // Error handlers (included as they can affect error behavior)
-    onDuplicateKey: options.onDuplicateKey,
-    onInvalidJson: options.onInvalidJson,
-    onBodyTooLarge: options.onBodyTooLarge,
-    onPrototypePollution: options.onPrototypePollution,
-    onError: options.onError,
   };
 
   const optionsStr = JSON.stringify(normalizedOptions);

@@ -15,33 +15,52 @@ If you need secure JSON parsing in Node.js APIs, this package is built for that 
 [![npm version](https://img.shields.io/npm/v/%40pas7%2Fnestjs-strict-json?style=flat-square)](https://www.npmjs.com/package/@pas7/nestjs-strict-json)
 [![Release](https://img.shields.io/github/v/release/pas7-studio/nestjs-strict-json?sort=semver&style=flat-square)](https://github.com/pas7-studio/nestjs-strict-json/releases)
 [![Build Status](https://github.com/pas7-studio/nestjs-strict-json/actions/workflows/ci.yml/badge.svg)](https://github.com/pas7-studio/nestjs-strict-json/actions/workflows/ci.yml)
+[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=pas7-studio_nestjs-strict-json&metric=alert_status&style=flat-square)](https://sonarcloud.io/summary/new_code?id=pas7-studio_nestjs-strict-json)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=pas7-studio_nestjs-strict-json&metric=security_rating&style=flat-square)](https://sonarcloud.io/summary/new_code?id=pas7-studio_nestjs-strict-json)
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=pas7-studio_nestjs-strict-json&metric=reliability_rating&style=flat-square)](https://sonarcloud.io/summary/new_code?id=pas7-studio_nestjs-strict-json)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=pas7-studio_nestjs-strict-json&metric=coverage&style=flat-square)](https://sonarcloud.io/summary/new_code?id=pas7-studio_nestjs-strict-json)
 [![License](https://img.shields.io/github/license/pas7-studio/nestjs-strict-json?style=flat-square)](https://github.com/pas7-studio/nestjs-strict-json/blob/main/LICENSE)
 [![Tests](https://img.shields.io/badge/tests-551%20passing-brightgreen.svg)](https://github.com/pas7-studio/nestjs-strict-json/actions/workflows/test.yml)
 [![Performance](https://img.shields.io/badge/performance-12.8x%20faster-blue.svg)](performance/reports/comparison-latest.md)
 
-## 🎯 Latest Achievements (v0.5.0)
+## v1.0.0 - Stable Release
 
-### 🚀 Performance Breakthrough
-- ✅ **12.8x faster parsing** - optimized from 80.71ms to 6.30ms per operation
-- ✅ **85% less memory** - reduced peak heap from 146MB to 21MB
-- ✅ **Only 18% slower than native JSON.parse** (was 24x slower)
-- ✅ **Validator caching** - 40-45% faster validation with LRU cache
+### Security
+- Zero SonarQube issues (bugs, vulnerabilities, code smells)
+- All 69 Security Hotspots resolved
+- SonarCloud Quality Gate: A ratings across Security, Reliability, Maintainability
 
-### 🐛 Critical Bug Fixes
-- ✅ **Memory leak fixed** - cleanup interval now properly disposed with `shutdownCacheManager()`
-- ✅ **Streaming duplicate validation** - correctly detects duplicate keys at all nesting levels
+### Performance
+- Lazy cache key computation — SHA-256 skipped when caching disabled
+- Deduplicated sync/async parse paths
+- ~5% faster on typical workloads
 
-### ✨ New Cache Management API
+### Modern Stack
+- TypeScript 6.0, Vitest 4, ESLint 10, NestJS 11, Express 5, Fastify 5
+
+### Quality
+- 551 tests, 7 e2e tests — all passing
+- Individual option type interfaces exported (`ParserOptions`, `CacheOptions`, etc.)
+
+## v0.5.0 Highlights
+
+### Performance Breakthrough
+- **12.8x faster parsing** - optimized from 80.71ms to 6.30ms per operation
+- **85% less memory** - reduced peak heap from 146MB to 21MB
+- **Only 18% slower than native JSON.parse** (was 24x slower)
+- **Validator caching** - 40-45% faster validation with LRU cache
+
+### Critical Bug Fixes
+- **Memory leak fixed** - cleanup interval now properly disposed with `shutdownCacheManager()`
+- **Streaming duplicate validation** - correctly detects duplicate keys at all nesting levels
+
+### Cache Management API
 - `shutdownCacheManager()` - graceful shutdown of cleanup interval
 - `resetCacheManager()` - full reset for testing
 - `isCleanupIntervalRunning()` - diagnostics for interval state
 - `getCachedValidator()` - get or create cached validator
 - `clearValidatorCache()` - clear validator cache
 - `getValidatorCacheSize()` - get cache size
-
-### 🧪 Test Coverage
-- ✅ Added 63 new tests (cache: 13, streaming: 32, validation: 18)
-- ✅ Total: 551 tests passing
 
 ## Why teams use this
 
@@ -206,7 +225,8 @@ server.listen({ port: 3000 });
 - `isCleanupIntervalRunning()` - check if cleanup interval is active
 - `getCachedValidator(key)` - get or create cached validator
 - `clearValidatorCache()` - clear validator cache
-- `getValidatorCacheSize()` - get current cache size
+- `getParseCacheSize()` - get current cache size
+- Individual option type interfaces: `ParserOptions`, `CacheOptions`, `StreamingOptions`, `LazyOptions`, `FilteringOptions`, `ErrorHandlerOptions`
 
 ## StrictJsonOptions
 
@@ -270,9 +290,10 @@ registerStrictJson(app, {
 ## Compatibility
 
 - Node.js 20+
-- NestJS 10+
-- Express 4+
-- Fastify 4+
+- NestJS 10+ (tested with 11.x)
+- Express 5+ (tested with 5.x)
+- Fastify 5+ (tested with 5.x)
+- TypeScript 5.x / 6.x
 
 ## 📚 Documentation
 

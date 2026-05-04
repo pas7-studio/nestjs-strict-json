@@ -6,11 +6,7 @@ export default defineConfig({
     globals: true,
     environment: "node",
     pool: "forks",
-    poolOptions: {
-      forks: {
-        singleFork: true,
-      },
-    },
+    singleFork: true,
     include: ["test/**/*.e2e.spec.ts"],
     exclude: ["node_modules", "dist"],
     testTimeout: 20000,

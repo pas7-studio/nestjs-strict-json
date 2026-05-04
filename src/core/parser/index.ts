@@ -47,9 +47,10 @@ class JsonParser {
     }
 
     const jsonStr = buf.toString("utf-8");
-    const cacheKey = buildCacheKey(jsonStr, this.options);
+    const cachingEnabled = this.options?.enableCache !== false;
+    const cacheKey = cachingEnabled ? buildCacheKey(jsonStr, this.options) : null;
 
-    if (this.options?.enableCache !== false) {
+    if (cacheKey !== null) {
       const cached = getParseCache().get(cacheKey);
       if (cached !== null) {
         return cached;
@@ -62,7 +63,7 @@ class JsonParser {
     return this.parseSync(buf, jsonStr, cacheKey);
   }
 
-  private parseSync(buf: Buffer, jsonStr: string, cacheKey: string): unknown {
+  private parseSync(buf: Buffer, jsonStr: string, cacheKey: string | null): unknown {
     const useStreaming = shouldUseStreamingForPayload(buf, this.options);
 
     if (this.options?.enableFastPath === true && !useStreaming) {
@@ -81,10 +82,10 @@ class JsonParser {
       return parsed;
     }
 
-    return this.fullParseSync(jsonStr, cacheKey);
+    return this.fullParse(jsonStr, cacheKey, (h, e) => this.invokeHandlerSync(h, e));
   }
 
-  private async parseAsync(buf: Buffer, jsonStr: string, cacheKey: string): Promise<unknown> {
+  private async parseAsync(buf: Buffer, jsonStr: string, cacheKey: string | null): Promise<unknown> {
     const useStreaming = shouldUseStreamingForPayload(buf, this.options);
 
     if (this.options?.enableFastPath === true && !useStreaming) {
@@ -103,18 +104,22 @@ class JsonParser {
       return result;
     }
 
-    return this.fullParseAsync(jsonStr, cacheKey);
+    return this.fullParse(jsonStr, cacheKey, async (h, e) => { await this.invokeHandlerAsync(h, e); });
   }
 
-  private fullParseSync(jsonStr: string, cacheKey: string): unknown {
+  private fullParse(
+    jsonStr: string,
+    cacheKey: string | null,
+    invoke: (handler: StrictJsonErrorHandler | undefined, error: unknown) => void,
+  ): unknown {
     const { effectiveOptions } = this.buildEffectiveOptions(jsonStr);
 
     try {
       const duplicate = findDuplicateKeysInJson(jsonStr, effectiveOptions);
       if (duplicate) {
         const error = new DuplicateKeyError(duplicate.path, duplicate.key);
-        this.invokeHandlerSync(this.options?.onDuplicateKey, error);
-        this.invokeHandlerSync(this.options?.onError, error);
+        invoke(this.options?.onDuplicateKey, error);
+        invoke(this.options?.onError, error);
         throw error;
       }
 
@@ -122,75 +127,25 @@ class JsonParser {
       this.cacheResult(cacheKey, parsed);
       return parsed;
     } catch (e) {
+      let errorToThrow: unknown = e;
+
       if (e instanceof PrototypePollutionError) {
-        this.invokeHandlerSync(this.options?.onPrototypePollution, e);
-        this.invokeHandlerSync(this.options?.onError, e);
-        throw e;
+        invoke(this.options?.onPrototypePollution, e);
+        invoke(this.options?.onError, e);
+      } else if (e instanceof DepthLimitError) {
+        invoke(this.options?.onError, e);
+      } else if (e instanceof DuplicateKeyError || e instanceof BodyTooLargeError) {
+      } else if (e instanceof InvalidJsonError) {
+        invoke(this.options?.onInvalidJson, e);
+        invoke(this.options?.onError, e);
+      } else {
+        const error = new InvalidJsonError("Invalid JSON");
+        invoke(this.options?.onInvalidJson, error);
+        invoke(this.options?.onError, error);
+        errorToThrow = error;
       }
 
-      if (e instanceof DepthLimitError) {
-        this.invokeHandlerSync(this.options?.onError, e);
-        throw e;
-      }
-
-      if (e instanceof DuplicateKeyError || e instanceof BodyTooLargeError) {
-        throw e;
-      }
-
-      if (e instanceof InvalidJsonError) {
-        this.invokeHandlerSync(this.options?.onInvalidJson, e);
-        this.invokeHandlerSync(this.options?.onError, e);
-        throw e;
-      }
-
-      const error = new InvalidJsonError("Invalid JSON");
-      this.invokeHandlerSync(this.options?.onInvalidJson, error);
-      this.invokeHandlerSync(this.options?.onError, error);
-      throw error;
-    }
-  }
-
-  private async fullParseAsync(jsonStr: string, cacheKey: string): Promise<unknown> {
-    const { effectiveOptions } = this.buildEffectiveOptions(jsonStr);
-
-    try {
-      const duplicate = findDuplicateKeysInJson(jsonStr, effectiveOptions);
-      if (duplicate) {
-        const error = new DuplicateKeyError(duplicate.path, duplicate.key);
-        await this.invokeHandlerAsync(this.options?.onDuplicateKey, error);
-        await this.invokeHandlerAsync(this.options?.onError, error);
-        throw error;
-      }
-
-      const parsed = JSON.parse(jsonStr);
-      this.cacheResult(cacheKey, parsed);
-      return parsed;
-    } catch (e) {
-      if (e instanceof PrototypePollutionError) {
-        await this.invokeHandlerAsync(this.options?.onPrototypePollution, e);
-        await this.invokeHandlerAsync(this.options?.onError, e);
-        throw e;
-      }
-
-      if (e instanceof DepthLimitError) {
-        await this.invokeHandlerAsync(this.options?.onError, e);
-        throw e;
-      }
-
-      if (e instanceof DuplicateKeyError || e instanceof BodyTooLargeError) {
-        throw e;
-      }
-
-      if (e instanceof InvalidJsonError) {
-        await this.invokeHandlerAsync(this.options?.onInvalidJson, e);
-        await this.invokeHandlerAsync(this.options?.onError, e);
-        throw e;
-      }
-
-      const error = new InvalidJsonError("Invalid JSON");
-      await this.invokeHandlerAsync(this.options?.onInvalidJson, error);
-      await this.invokeHandlerAsync(this.options?.onError, error);
-      throw error;
+      throw errorToThrow;
     }
   }
 
@@ -211,8 +166,8 @@ class JsonParser {
     return { effectiveOptions };
   }
 
-  private cacheResult(cacheKey: string, result: unknown): void {
-    if (this.options?.enableCache !== false) {
+  private cacheResult(cacheKey: string | null, result: unknown): void {
+    if (cacheKey !== null) {
       getParseCache().set(cacheKey, result);
     }
   }

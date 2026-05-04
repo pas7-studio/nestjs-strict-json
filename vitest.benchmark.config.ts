@@ -8,11 +8,7 @@ export default defineConfig({
     globals: true,
     environment: "node",
     pool: "forks",
-    poolOptions: {
-      forks: {
-        singleFork: true,
-      },
-    },
+    singleFork: true,
     // Включаємо файли бенчмарків
     include: [
       "performance/benchmarks/**/*.spec.ts"
