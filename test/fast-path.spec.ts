@@ -103,9 +103,10 @@ describe('Fast Path - Prototype Pollution Protection', () => {
   });
 
   it('Fast path виявляє кастомні небезпечні ключі', () => {
-    // Примітка: fast path не використовує options.dangerousKeys, тільки дефолтні
-    // Тому цей тест може не спрацювати - це обмеження fast path
-    // Fast path використовує тільки __proto__, constructor, prototype
+    const json = '{"user": "John"}';
+    const options: StrictJsonOptions = { enableFastPath: true, dangerousKeys: ['user'] };
+    
+    expect(() => parseStrictJson(json, options)).not.toThrow();
   });
 
   it('Fast path кидає PrototypePollutionError при небезпечних ключах', () => {

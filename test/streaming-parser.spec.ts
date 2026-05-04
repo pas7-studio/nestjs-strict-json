@@ -46,60 +46,65 @@ describe('StreamingJsonParser', () => {
       const json = '{"name":"John","age":30,"city":"New York"}';
       const parser = new StreamingJsonParser();
 
-      await new Promise<void>((resolve, reject) => {
+      const result = await new Promise<void>((resolve, reject) => {
         parser.on('end', resolve);
         parser.on('error', reject);
         const stream = Readable.from([json]);
         stream.pipe(parser);
       });
+      expect(result).toBeUndefined();
     });
 
     it('should validate array from single chunk', async () => {
       const json = '[1,2,3,4,5]';
       const parser = new StreamingJsonParser();
 
-      await new Promise<void>((resolve, reject) => {
+      const result = await new Promise<void>((resolve, reject) => {
         parser.on('end', resolve);
         parser.on('error', reject);
         const stream = Readable.from([json]);
         stream.pipe(parser);
       });
+      expect(result).toBeUndefined();
     });
 
     it('should validate nested objects from single chunk', async () => {
       const json = '{"user":{"name":"John","age":30},"meta":{"created":"2024"}}';
       const parser = new StreamingJsonParser();
 
-      await new Promise<void>((resolve, reject) => {
+      const result = await new Promise<void>((resolve, reject) => {
         parser.on('end', resolve);
         parser.on('error', reject);
         const stream = Readable.from([json]);
         stream.pipe(parser);
       });
+      expect(result).toBeUndefined();
     });
 
     it('should validate empty object', async () => {
       const json = '{}';
       const parser = new StreamingJsonParser();
 
-      await new Promise<void>((resolve, reject) => {
+      const result = await new Promise<void>((resolve, reject) => {
         parser.on('end', resolve);
         parser.on('error', reject);
         const stream = Readable.from([json]);
         stream.pipe(parser);
       });
+      expect(result).toBeUndefined();
     });
 
     it('should validate empty array', async () => {
       const json = '[]';
       const parser = new StreamingJsonParser();
 
-      await new Promise<void>((resolve, reject) => {
+      const result = await new Promise<void>((resolve, reject) => {
         parser.on('end', resolve);
         parser.on('error', reject);
         const stream = Readable.from([json]);
         stream.pipe(parser);
       });
+      expect(result).toBeUndefined();
     });
 
     it('should validate deeply nested object', async () => {
@@ -116,12 +121,13 @@ describe('StreamingJsonParser', () => {
       });
       const parser = new StreamingJsonParser();
 
-      await new Promise<void>((resolve, reject) => {
+      const result = await new Promise<void>((resolve, reject) => {
         parser.on('end', resolve);
         parser.on('error', reject);
         const stream = Readable.from([json]);
         stream.pipe(parser);
       });
+      expect(result).toBeUndefined();
     });
   });
 
@@ -183,36 +189,39 @@ describe('StreamingJsonParser', () => {
       const json = '{"name":"John","age":30}';
       const parser = new StreamingJsonParser();
 
-      await new Promise<void>((resolve, reject) => {
+      const result = await new Promise<void>((resolve, reject) => {
         parser.on('end', resolve);
         parser.on('error', reject);
         const stream = Readable.from([json]);
         stream.pipe(parser);
       });
+      expect(result).toBeUndefined();
     });
 
     it('should allow same keys in different objects', async () => {
       const json = '{"user1":{"name":"John"},"user2":{"name":"Jane"}}';
       const parser = new StreamingJsonParser();
 
-      await new Promise<void>((resolve, reject) => {
+      const result = await new Promise<void>((resolve, reject) => {
         parser.on('end', resolve);
         parser.on('error', reject);
         const stream = Readable.from([json]);
         stream.pipe(parser);
       });
+      expect(result).toBeUndefined();
     });
 
     it('should allow same keys in different array elements', async () => {
       const json = '[{"id":1},{"id":2}]';
       const parser = new StreamingJsonParser();
 
-      await new Promise<void>((resolve, reject) => {
+      const result = await new Promise<void>((resolve, reject) => {
         parser.on('end', resolve);
         parser.on('error', reject);
         const stream = Readable.from([json]);
         stream.pipe(parser);
       });
+      expect(result).toBeUndefined();
     });
 
     it('should detect duplicate in root object with nested arrays', async () => {
@@ -332,12 +341,13 @@ describe('StreamingJsonParser', () => {
       };
       const parser = new StreamingJsonParser(options);
 
-      await new Promise<void>((resolve, reject) => {
+      const result = await new Promise<void>((resolve, reject) => {
         parser.on('end', resolve);
         parser.on('error', reject);
         const stream = Readable.from([json]);
         stream.pipe(parser);
       });
+      expect(result).toBeUndefined();
     });
 
     it('should block dangerous key with multiple custom keys', async () => {
@@ -363,12 +373,13 @@ describe('StreamingJsonParser', () => {
       };
       const parser = new StreamingJsonParser(options);
 
-      await new Promise<void>((resolve, reject) => {
+      const result = await new Promise<void>((resolve, reject) => {
         parser.on('end', resolve);
         parser.on('error', reject);
         const stream = Readable.from([json]);
         stream.pipe(parser);
       });
+      expect(result).toBeUndefined();
     });
   });
 
@@ -380,12 +391,13 @@ describe('StreamingJsonParser', () => {
       });
       const parser = new StreamingJsonParser();
 
-      await new Promise<void>((resolve, reject) => {
+      const result = await new Promise<void>((resolve, reject) => {
         parser.on('end', resolve);
         parser.on('error', reject);
         const stream = Readable.from([json]);
         stream.pipe(parser);
       });
+      expect(result).toBeUndefined();
     });
 
     it('should use custom maxDepth', async () => {
@@ -395,12 +407,13 @@ describe('StreamingJsonParser', () => {
       const options: StrictJsonOptions = { maxDepth: 5 };
       const parser = new StreamingJsonParser(options);
 
-      await new Promise<void>((resolve, reject) => {
+      const result = await new Promise<void>((resolve, reject) => {
         parser.on('end', resolve);
         parser.on('error', reject);
         const stream = Readable.from([json]);
         stream.pipe(parser);
       });
+      expect(result).toBeUndefined();
     });
 
     it('should throw MaxDepthExceededError when exceeding limit', async () => {
@@ -433,24 +446,26 @@ describe('StreamingJsonParser', () => {
       });
       const parser = new StreamingJsonParser();
 
-      await new Promise<void>((resolve, reject) => {
+      const result = await new Promise<void>((resolve, reject) => {
         parser.on('end', resolve);
         parser.on('error', reject);
         const stream = Readable.from([json]);
         stream.pipe(parser);
       });
+      expect(result).toBeUndefined();
     });
 
     it('should handle nested arrays correctly for depth', async () => {
       const json = JSON.stringify([[[{ value: 'ok' }]]]);
       const parser = new StreamingJsonParser();
 
-      await new Promise<void>((resolve, reject) => {
+      const result = await new Promise<void>((resolve, reject) => {
         parser.on('end', resolve);
         parser.on('error', reject);
         const stream = Readable.from([json]);
         stream.pipe(parser);
       });
+      expect(result).toBeUndefined();
     });
 
     it('should throw on custom depth limit with nested objects', async () => {
@@ -480,12 +495,13 @@ describe('StreamingJsonParser', () => {
       const options: StrictJsonOptions = { maxDepth: 10 };
       const parser = new StreamingJsonParser(options);
 
-      await new Promise<void>((resolve, reject) => {
+      const result = await new Promise<void>((resolve, reject) => {
         parser.on('end', resolve);
         parser.on('error', reject);
         const stream = Readable.from([json]);
         stream.pipe(parser);
       });
+      expect(result).toBeUndefined();
     });
 
     it('should include current depth in error message', async () => {
