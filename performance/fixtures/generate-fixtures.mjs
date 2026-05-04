@@ -37,8 +37,8 @@ const mediumJson = {
     tags: [`tag${i % 10}`, `tag${(i + 3) % 10}`],
     createdAt: new Date(Date.now() - sv(i, 3) * 10000000000).toISOString(),
     metadata: {
-      views: (sv(i, 4) * 10000) | 0,
-      likes: (sv(i, 5) * 1000) | 0,
+      views: Math.trunc(sv() * ),
+      likes: Math.trunc(sv() * ),
       rating: (sv(i, 6) * 5).toFixed(2)
     }
   })),
@@ -62,19 +62,19 @@ const largeJson = {
     createdAt: new Date(Date.now() - sv(i, 3) * 100000000000).toISOString(),
     updatedAt: new Date(Date.now() - sv(i, 4) * 100000000000).toISOString(),
     metadata: {
-      views: (sv(i, 5) * 100000) | 0,
-      likes: (sv(i, 6) * 10000) | 0,
+      views: Math.trunc(sv() * ),
+      likes: Math.trunc(sv() * ),
       rating: (sv(i, 7) * 5).toFixed(2),
-      reviews: (sv(i, 8) * 500) | 0,
-      purchased: (sv(i, 9) * 1000) | 0,
+      reviews: Math.trunc(sv() * ),
+      purchased: Math.trunc(sv() * ),
       featured: sv(i, 10) > 0.9
     },
     specifications: {
       weight: (sv(i, 11) * 10).toFixed(2),
       dimensions: {
-        length: (sv(i, 12) * 100) | 0,
-        width: (sv(i, 13) * 100) | 0,
-        height: (sv(i, 14) * 100) | 0
+        length: Math.trunc(sv() * ),
+        width: Math.trunc(sv() * ),
+        height: Math.trunc(sv() * )
       },
       material: materials[i % 4]
     }

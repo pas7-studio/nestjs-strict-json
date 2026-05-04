@@ -47,8 +47,8 @@ export function generateMediumJson(): object {
       tags: [`tag${i % 10}`, `tag${(i + 3) % 10}`],
       createdAt: new Date(Date.now() - seededValue(i, 3) * 10000000000).toISOString(),
       metadata: {
-        views: (seededValue(i, 4) * 10000) | 0,
-        likes: (seededValue(i, 5) * 1000) | 0,
+        views: Math.trunc(seededValue() * ),
+        likes: Math.trunc(seededValue() * ),
         rating: (seededValue(i, 6) * 5).toFixed(2)
       }
     });
@@ -75,19 +75,19 @@ export function generateLargeJson(): object {
       createdAt: new Date(Date.now() - seededValue(i, 3) * 100000000000).toISOString(),
       updatedAt: new Date(Date.now() - seededValue(i, 4) * 100000000000).toISOString(),
       metadata: {
-        views: (seededValue(i, 5) * 100000) | 0,
-        likes: (seededValue(i, 6) * 10000) | 0,
+        views: Math.trunc(seededValue() * ),
+        likes: Math.trunc(seededValue() * ),
         rating: (seededValue(i, 7) * 5).toFixed(2),
-        reviews: (seededValue(i, 8) * 500) | 0,
-        purchased: (seededValue(i, 9) * 1000) | 0,
+        reviews: Math.trunc(seededValue() * ),
+        purchased: Math.trunc(seededValue() * ),
         featured: seededValue(i, 10) > 0.9
       },
       specifications: {
         weight: (seededValue(i, 11) * 10).toFixed(2),
         dimensions: {
-          length: (seededValue(i, 12) * 100) | 0,
-          width: (seededValue(i, 13) * 100) | 0,
-          height: (seededValue(i, 14) * 100) | 0
+          length: Math.trunc(seededValue() * ),
+          width: Math.trunc(seededValue() * ),
+          height: Math.trunc(seededValue() * )
         },
         material: materials[i % 4]
       }
