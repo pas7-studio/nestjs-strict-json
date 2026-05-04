@@ -18,6 +18,21 @@ export type FastifyLikeInstance = {
   ) => void;
 };
 
+const buildErrorPayload = (d: { code: string; message: string; path?: string; key?: string; position?: number }) => {
+  const hasDetails = d.path || d.key || typeof d.position === "number";
+  if (!hasDetails) return { code: d.code, message: d.message };
+
+  return {
+    code: d.code,
+    message: d.message,
+    details: {
+      ...(d.path ? { path: d.path } : {}),
+      ...(d.key ? { key: d.key } : {}),
+      ...(typeof d.position === "number" ? { position: d.position } : {}),
+    },
+  };
+};
+
 export const registerStrictJsonFastify = (
   instance: FastifyLikeInstance,
   options?: StrictJsonOptions,
@@ -31,24 +46,9 @@ export const registerStrictJsonFastify = (
         done(null, parsed);
       } catch (e) {
         if (e instanceof StrictJsonError) {
-          const d = e.details;
-          const payload = {
-            code: d.code,
-            message: d.message,
-            ...(d.path || d.key || typeof d.position === "number"
-              ? {
-                  details: {
-                    ...(d.path ? { path: d.path } : {}),
-                    ...(d.key ? { key: d.key } : {}),
-                    ...(typeof d.position === "number"
-                      ? { position: d.position }
-                      : {}),
-                  },
-                }
-              : {}),
-          };
+          const payload = buildErrorPayload(e.details);
 
-          if (d.code === "STRICT_JSON_BODY_TOO_LARGE") {
+          if (e.details.code === "STRICT_JSON_BODY_TOO_LARGE") {
             done(new PayloadTooLargeException(payload));
             return;
           }

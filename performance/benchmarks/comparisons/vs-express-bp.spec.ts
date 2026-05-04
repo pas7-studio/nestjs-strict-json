@@ -2,7 +2,7 @@
  * Порівняльні бенчмарки: @pas7/nestjs-strict-json vs Express body-parser
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { runBenchmark, BenchmarkSuite } from '../../utils/benchmark-runner.js';
 import { saveReports } from '../../utils/reporters.js';
 import {
@@ -12,7 +12,6 @@ import {
   toJsonString
 } from '../../utils/generators.js';
 import { parseStrictJson } from '../../../src/index.js';
-import { createServer, IncomingMessage, ServerResponse } from 'http';
 
 /**
  * Simulate Express body-parser with JSON parsing
@@ -20,7 +19,6 @@ import { createServer, IncomingMessage, ServerResponse } from 'http';
 function simulateExpressBodyParser(jsonString: string): unknown {
   // Express body-parser does basic JSON.parse with some validation
   const contentType = 'application/json';
-  const limit = '100mb';
 
   // Check content type
   if (!contentType.includes('application/json')) {
@@ -70,9 +68,8 @@ function simulatePas7ExpressMiddleware(jsonString: string): unknown {
   // This simulates what happens in the Express adapter
   try {
     return parseStrictJson(jsonString);
-  } catch (error) {
-    // Express middleware would normally send error response
-    throw error;
+  } catch {
+    throw new Error('Parse error in Express middleware simulation');
   }
 }
 
@@ -87,7 +84,7 @@ function simulateExpressRequestProcessing(
   const requestStartTime = performance.now();
 
   // Parse headers
-  const headers = {
+  const _headers = {
     'content-type': 'application/json',
     'content-length': Buffer.byteLength(jsonString, 'utf8').toString()
   };
@@ -285,7 +282,7 @@ describe('Comparison: @pas7/nestjs-strict-json vs Express body-parser', () => {
         () => {
           try {
             simulateExpressBodyParser(invalidJson);
-          } catch (e) {
+          } catch {
             // Expected error
             return;
           }
@@ -303,7 +300,7 @@ describe('Comparison: @pas7/nestjs-strict-json vs Express body-parser', () => {
         () => {
           try {
             simulateExpressWithCustomMiddleware(invalidJson);
-          } catch (e) {
+          } catch {
             // Expected error
             return;
           }
@@ -321,7 +318,7 @@ describe('Comparison: @pas7/nestjs-strict-json vs Express body-parser', () => {
         () => {
           try {
             simulatePas7ExpressMiddleware(invalidJson);
-          } catch (e) {
+          } catch {
             // Expected error
             return;
           }

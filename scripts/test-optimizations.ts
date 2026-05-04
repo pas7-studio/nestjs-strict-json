@@ -3,7 +3,7 @@
  * Tests lazy mode, caching, and streaming performance
  */
 
-import { parseStrictJson, parseStrictJsonAsync, clearParseCache, getParseCacheSize } from '../src/index.js';
+import { parseStrictJson, clearParseCache, getParseCacheSize } from '../src/index.js';
 
 function generateLargePayload(sizeInBytes: number): string {
   const items = [];
@@ -41,6 +41,20 @@ function runBenchmark(name: string, fn: () => void, iterations: number = 10): { 
   }
 }
 
+function logSpeedup(standardTime: number, optimizedTime: number): void {
+  const speedup = standardTime / optimizedTime;
+  console.log(`  Speedup: ${speedup.toFixed(2)}x ${speedup > 1 ? '✅' : '⚠️'}`);
+}
+
+function parseWithSizeOptions(json: string, size: number) {
+  return parseStrictJson(json, {
+    lazyMode: size >= 100 * 1024,
+    enableCache: true,
+    enableStreaming: size >= 100 * 1024,
+    streamingThreshold: 100 * 1024,
+  });
+}
+
 async function main() {
   console.log('='.repeat(80));
   console.log('OPTIMIZATION PERFORMANCE TEST');
@@ -71,8 +85,7 @@ async function main() {
   console.log(`  Standard: ${standardResult.time.toFixed(4)}ms`);
   console.log(`  Lazy Mode: ${lazyResult.time.toFixed(4)}ms`);
   if (standardResult.success && lazyResult.success) {
-    const speedup = standardResult.time / lazyResult.time;
-    console.log(`  Speedup: ${speedup.toFixed(2)}x ${speedup > 1 ? '✅' : '⚠️'}`);
+    logSpeedup(standardResult.time, lazyResult.time);
   }
   console.log();
 
@@ -97,8 +110,7 @@ async function main() {
   console.log(`  First parse: ${firstParse.time.toFixed(4)}ms`);
   console.log(`  Cached parse: ${cachedParse.time.toFixed(4)}ms`);
   if (firstParse.success && cachedParse.success) {
-    const speedup = firstParse.time / cachedParse.time;
-    console.log(`  Speedup: ${speedup.toFixed(2)}x ${speedup > 1 ? '✅' : '⚠️'}`);
+    logSpeedup(firstParse.time, cachedParse.time);
   }
   console.log();
 
@@ -117,8 +129,7 @@ async function main() {
   console.log(`  Standard: ${standardSmall.time.toFixed(4)}ms`);
   console.log(`  Fast Path: ${fastPathSmall.time.toFixed(4)}ms`);
   if (standardSmall.success && fastPathSmall.success) {
-    const speedup = standardSmall.time / fastPathSmall.time;
-    console.log(`  Speedup: ${speedup.toFixed(2)}x ${speedup > 1 ? '✅' : '⚠️'}`);
+    logSpeedup(standardSmall.time, fastPathSmall.time);
   }
   console.log();
 
@@ -154,23 +165,13 @@ async function main() {
     { label: '1MB', size: 1 * 1024 * 1024 },
   ];
   
-  const sizeResults: { label: string; time: number }[] = [];
-  
   for (const { label, size } of sizes) {
     const json = generateLargePayload(size);
     const result = runBenchmark(
       `${label} payload`,
-      () => {
-        parseStrictJson(json, {
-          lazyMode: size >= 100 * 1024,
-          enableCache: true,
-          enableStreaming: size >= 100 * 1024,
-          streamingThreshold: 100 * 1024,
-        });
-      },
+      () => parseWithSizeOptions(json, size),
       size >= 1 * 1024 * 1024 ? 3 : 10
     );
-    sizeResults.push({ label, time: result.time });
     console.log(`  ${label}: ${result.time.toFixed(4)}ms`);
   }
   

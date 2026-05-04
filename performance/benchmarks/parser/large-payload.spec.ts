@@ -5,7 +5,6 @@
 import { describe, it, expect } from 'vitest';
 import { runBenchmark, BenchmarkSuite } from '../../utils/benchmark-runner.js';
 import { saveReports } from '../../utils/reporters.js';
-import { toJsonString } from '../../utils/generators.js';
 import { parseStrictJson } from '../../../src/index.js';
 
 /**
@@ -315,13 +314,14 @@ describe('Large Payload Benchmarks', () => {
 
       for (const count of [1000, 10000, 100000]) {
         const json = generateLargeObjectArray(count, 5);
+        const iterations = count === 1000 ? 100 : count === 10000 ? 50 : 10;
         const result = runBenchmark(
           'Scaling Test',
           `${count} Objects`,
           () => {
             parseStrictJson(json);
           },
-          count === 1000 ? 100 : count === 10000 ? 50 : 10
+          iterations
         );
         results.push({ count, time: result.time, memory: result.memory });
         console.log(`${count} objects: ${result.time.toFixed(4)}ms, ${result.memory.toFixed(4)}MB`);
@@ -355,7 +355,7 @@ describe('Large Payload Benchmarks', () => {
           try {
             parseStrictJson(json, { maxBodySizeBytes: 100 * 1024 });
             return; // Should not reach here
-          } catch (e) {
+          } catch {
             // Expected error - body too large
             return;
           }

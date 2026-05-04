@@ -5,7 +5,6 @@
 import { describe, it, expect } from 'vitest';
 import { runBenchmark, BenchmarkSuite } from '../../utils/benchmark-runner.js';
 import { saveReports } from '../../utils/reporters.js';
-import { toJsonString } from '../../utils/generators.js';
 import { parseStrictJson } from '../../../src/index.js';
 
 /**
@@ -232,7 +231,7 @@ describe('Deep Nesting Benchmarks', () => {
           try {
             parseStrictJson(json);
             return; // Should not reach here
-          } catch (e) {
+          } catch {
             // Expected error - depth limit exceeded
             return;
           }
@@ -252,7 +251,7 @@ describe('Deep Nesting Benchmarks', () => {
           try {
             parseStrictJson(json);
             return; // Should not reach here
-          } catch (e) {
+          } catch {
             // Expected error - depth limit exceeded
             return;
           }
@@ -275,7 +274,7 @@ describe('Deep Nesting Benchmarks', () => {
           try {
             parseStrictJson(json, { maxDepth: 5 });
             return; // Should not reach here
-          } catch (e) {
+          } catch {
             // Expected error - depth limit exceeded
             return;
           }
@@ -402,14 +401,14 @@ describe('Deep Nesting Benchmarks', () => {
       .add('Very Deep', 'Depth 25', () => {
         try {
           parseStrictJson(generateNestedJsonDepth(25));
-        } catch (e) {
+        } catch {
           // Expected error
         }
       }, 100)
       .add('Very Deep', 'Depth 30', () => {
         try {
           parseStrictJson(generateNestedJsonDepth(30));
-        } catch (e) {
+        } catch {
           // Expected error
         }
       }, 100);

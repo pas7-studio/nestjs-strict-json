@@ -130,7 +130,9 @@ async function runAllBenchmarks() {
 }
 
 // Run benchmarks
-runAllBenchmarks().catch(error => {
+try {
+  await runAllBenchmarks();
+} catch (error) {
   console.error('Fatal error running benchmarks:', error);
   process.exit(1);
-});
+}

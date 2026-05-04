@@ -49,7 +49,7 @@ export class KeyPolicyValidator {
   private blacklistMatcher: PatternMatcher;
   private whitelistPatterns: string[];
   private blacklistPatterns: string[];
-  private ignoreCase: boolean;
+  private readonly ignoreCase: boolean;
   private hasWhitelist: boolean;
 
   /**
@@ -104,7 +104,7 @@ export class KeyPolicyValidator {
     let normalizedKey = key;
 
     // Видаляємо префікс JSON pointer "$." для патерн-матчингу
-    if (normalizedKey.startsWith('$.') || normalizedKey.startsWith('$.')) {
+    if (normalizedKey.startsWith('$.') || normalizedKey.startsWith('$[')) {
       normalizedKey = normalizedKey.slice(2);
     }
 
@@ -121,12 +121,11 @@ export class KeyPolicyValidator {
     // Якщо whitelist переданий але порожній, заборонити всі ключі
     if (this.hasWhitelist) {
       if (this.whitelistPatterns.length === 0) {
-        return false; // Порожній whitelist забороняє все
+        return false;
       }
 
       const whitelisted = this.checkWhitelist(normalizedKey, keyForPatternMatching);
       
-      // Якщо whitelist визначений і ключ не відповідає жодному патерну, заборонити
       if (!whitelisted) {
         return false;
       }
@@ -138,84 +137,56 @@ export class KeyPolicyValidator {
     if (this.blacklistPatterns.length > 0) {
       const blocked = this.checkBlacklist(normalizedKey, keyForPatternMatching);
       
-      // Якщо ключ заблоковано blacklist, заборонити
       if (blocked) {
         return false;
       }
     }
 
-    // Дозволено якщо:
-    // 1. Whitelist відповідає (і або немає blacklist, або whitelist має пріоритет)
-    // 2. Немає whitelist і проходить перевірку blacklist
     return true;
   }
 
-  /**
-   * Перевіряє чи відповідає ключ жодному з whitelist патернів
-   * 
-   * @param normalizedKey - Нормалізований ключ
-   * @param keyForPatternMatching - Ключ для патерн-матчингу
-   * @returns true якщо ключ відповідає whitelist, інакше false
-   * 
-   * @private
-   */
+  private normalizePattern(pattern: string): string {
+    return this.ignoreCase ? pattern.toLowerCase() : pattern;
+  }
+
+  private matchesExactOrPrefix(pattern: string, key: string): boolean {
+    return pattern === key || pattern.startsWith(key + '.') || pattern.startsWith(key + '[');
+  }
+
+  private matchesWildcardSuffix(pattern: string, key: string): boolean {
+    return pattern.endsWith('.*') && key === pattern.slice(0, -2);
+  }
+
+  private matchesStarPrefixLastPart(pattern: string, key: string): boolean {
+    const keyPart = pattern.slice(2);
+    const keyParts = key.split('.');
+    return keyParts.at(-1) === keyPart;
+  }
+
+  private matchesDoubleStarPrefix(pattern: string, key: string): boolean {
+    const parts = pattern.split('**');
+    return parts[0].length > 0 && key.startsWith(parts[0]);
+  }
+
+  private matchesStarPrefix(pattern: string, key: string): boolean {
+    const starIndex = pattern.indexOf('*');
+    if (starIndex <= 0) return false;
+    const prefix = pattern.slice(0, starIndex);
+    const normalizedPrefix = prefix.endsWith('.') ? prefix.slice(0, -1) : prefix;
+    return key === normalizedPrefix || key.startsWith(normalizedPrefix + '.') || key.startsWith(normalizedPrefix + '[');
+  }
+
   private checkWhitelist(normalizedKey: string, keyForPatternMatching: string): boolean {
     for (const pattern of this.whitelistPatterns) {
-      const normalizedPattern = this.ignoreCase ? pattern.toLowerCase() : pattern;
+      const normalizedPattern = this.normalizePattern(pattern);
 
-      // Перевіряємо точний збіг або префікс патерну
-      // Це дозволяє батьківським ключам бути неявно дозволеними коли існують глибші патерни
-      // наприклад, якщо whitelist містить "data.users", то "data" і "data.users" дозволені
-      if (normalizedPattern === normalizedKey || 
-          normalizedPattern.startsWith(normalizedKey + '.') || 
-          normalizedPattern.startsWith(normalizedKey + '[')) {
-        return true;
-      }
+      if (this.matchesExactOrPrefix(normalizedPattern, normalizedKey)) return true;
+      if (this.matchesWildcardSuffix(normalizedPattern, normalizedKey)) return true;
+      if (globToRegex(normalizedPattern).test(keyForPatternMatching)) return true;
+      if (normalizedPattern.startsWith('*.') && this.matchesStarPrefixLastPart(normalizedPattern, normalizedKey)) return true;
+      if (normalizedPattern.includes('**') && this.matchesDoubleStarPrefix(normalizedPattern, normalizedKey)) return true;
+      if (this.matchesStarPrefix(normalizedPattern, normalizedKey)) return true;
 
-      // Спеціальний випадок: патерни що закінчуються на .* також мають відповідати префіксу
-      // наприклад, "user.*" має відповідати "user", "user.name", тощо
-      if (normalizedPattern.endsWith('.*') && normalizedKey === normalizedPattern.slice(0, -2)) {
-        return true;
-      }
-
-      // Перевірка glob патерну
-      if (globToRegex(normalizedPattern).test(keyForPatternMatching)) {
-        return true;
-      }
-
-      // Спеціальний випадок: "*.key" має відповідати будь-якому батьківському шляху за яким слідує ключ
-      if (normalizedPattern.startsWith('*.')) {
-        const keyPart = normalizedPattern.slice(2);
-        const keyParts = normalizedKey.split('.');
-        if (keyParts[keyParts.length - 1] === keyPart) {
-          return true;
-        }
-      }
-
-      // Перевіряємо чи відповідає ключ префіксу перед ** в патернах як "data.**.name"
-      // наприклад, "data" або "data.users" має відповідати "data.**.name"
-      if (normalizedPattern.includes('**')) {
-        const parts = normalizedPattern.split('**');
-        if (normalizedKey.startsWith(parts[0]) && parts[0].length > 0) {
-          return true;
-        }
-      }
-
-      // Перевіряємо чи відповідає ключ префіксу перед будь-яким * в патерні
-      // наприклад, "response" або "response.data" має відповідати "response.data.users.*.id"
-      const starIndex = normalizedPattern.indexOf('*');
-      if (starIndex > 0) {
-        const prefix = normalizedPattern.slice(0, starIndex);
-        const normalizedPrefix = prefix.endsWith('.') ? prefix.slice(0, -1) : prefix;
-        if (normalizedKey === normalizedPrefix || 
-            normalizedKey.startsWith(normalizedPrefix + '.') || 
-            normalizedKey.startsWith(normalizedPrefix + '[')) {
-          return true;
-        }
-      }
-
-      // Також дозволяємо точний префіксний збіг для патернів як "data.user.*"
-      // наприклад, "data.user" має відповідати "data.user.*"
       if (normalizedPattern !== normalizedKey && 
           normalizedPattern.startsWith(normalizedKey + '.') &&
           normalizedPattern.endsWith('.*')) {
@@ -226,100 +197,57 @@ export class KeyPolicyValidator {
     return false;
   }
 
-  /**
-   * Перевіряє чи заблоковано ключ жодним з blacklist патернів
-   * 
-   * @param normalizedKey - Нормалізований ключ
-   * @param keyForPatternMatching - Ключ для патерн-матчингу
-   * @returns true якщо ключ заблоковано blacklist, інакше false
-   * 
-   * @private
-   */
+  private hasNonWildcardWhitelistMatch(key: string): boolean {
+    return this.hasWhitelist && this.whitelistPatterns.some(w => {
+      const normalizedPattern = this.normalizePattern(w);
+      return !normalizedPattern.includes('*') && this.matchesExactOrPrefix(normalizedPattern, key);
+    });
+  }
+
+  private hasWildcardWhitelistMatch(keyForPatternMatching: string): boolean {
+    return this.hasWhitelist && this.whitelistPatterns.some(w => {
+      const normalizedPattern = this.normalizePattern(w);
+      return normalizedPattern.includes('*') && globToRegex(normalizedPattern).test(keyForPatternMatching);
+    });
+  }
+
+  private matchesBlacklistPattern(pattern: string, keyForPatternMatching: string): boolean {
+    return globToRegex(pattern).test(keyForPatternMatching);
+  }
+
+  private matchesBlacklistStarPrefix(pattern: string, normalizedKey: string): boolean {
+    return pattern.startsWith('*.') && this.matchesStarPrefixLastPart(pattern, normalizedKey);
+  }
+
+  private matchesBlacklistSuffix(pattern: string, normalizedKey: string): boolean {
+    return !pattern.includes('*') && normalizedKey.endsWith('.' + pattern);
+  }
+
   private checkBlacklist(normalizedKey: string, keyForPatternMatching: string): boolean {
-    // Перевіряємо чи є non-wildcard whitelist патерни які мають пріоритет над blacklist
-    const hasNonWildcardWhitelist = this.hasWhitelist && this.whitelistPatterns.some(w => !w.includes('*'));
-
-    if (hasNonWildcardWhitelist) {
-      // Тільки застосовувати blacklist якщо ключ не відповідає non-wildcard whitelist патернам
-      const matchesNonWildcardWhitelist = this.whitelistPatterns.some(w => {
-        const normalizedPattern = this.ignoreCase ? w.toLowerCase() : w;
-        if (normalizedPattern.includes('*')) return false;
-        return normalizedKey === normalizedPattern || normalizedKey.startsWith(normalizedPattern + '.');
-      });
-
-      if (matchesNonWildcardWhitelist) {
-        // Ключ відповідає non-wildcard whitelist, тому whitelist має пріоритет
-        return false;
-      }
+    if (this.hasNonWildcardWhitelistMatch(normalizedKey)) {
+      return false;
     }
 
-    // Також перевіряємо чи відповідає ключ будь-якому wildcard whitelist патерну
-    // Якщо так, тільки застосовувати blacklist якщо ключ не відповідає конкретному whitelist патерну
-    if (this.hasWhitelist) {
-      const matchesWildcardWhitelist = this.whitelistPatterns.some(w => {
-        const normalizedPattern = this.ignoreCase ? w.toLowerCase() : w;
-        if (!normalizedPattern.includes('*')) return false;
-        return globToRegex(normalizedPattern).test(keyForPatternMatching);
-      });
-
-      if (matchesWildcardWhitelist) {
-        // Ключ відповідає wildcard whitelist патерну, тому перевіряємо чи він також відповідає blacklist
-        // Тільки відхилити якщо ключ не відповідає whitelist патерну
-        // наприклад, "data.user.email" відповідає whitelist "data.user.*" але заблокований "*.email"
-        const matchesBlacklist = this.blacklistPatterns.some(pattern => {
-          const normalizedPattern = this.ignoreCase ? pattern.toLowerCase() : pattern;
-          return globToRegex(normalizedPattern).test(keyForPatternMatching);
-        });
-
-        // Якщо ключ відповідає blacklist, відхилити
-        if (matchesBlacklist) {
-          return true;
-        }
-
-        // В іншому випадку дозволити (whitelist має пріоритет)
-        return false;
-      }
+    if (this.hasWildcardWhitelistMatch(keyForPatternMatching)) {
+      const matchesBlacklist = this.blacklistPatterns.some(pattern =>
+        this.matchesBlacklistPattern(this.normalizePattern(pattern), keyForPatternMatching),
+      );
+      return matchesBlacklist;
     }
 
-    // Застосовуємо правила blacklist
     for (const pattern of this.blacklistPatterns) {
-      const normalizedPattern = this.ignoreCase ? pattern.toLowerCase() : pattern;
+      const normalizedPattern = this.normalizePattern(pattern);
 
-      // Спеціальний випадок: "*.key" має відповідати будь-якому батьківському шляху за яким слідує ключ
-      if (normalizedPattern.startsWith('*.')) {
-        const keyPart = normalizedPattern.slice(2);
-        const keyParts = normalizedKey.split('.');
-        if (keyParts[keyParts.length - 1] === keyPart) {
-          return true;
-        }
-      }
-
-      // Перевіряємо чи ключ закінчується патерном (для випадків як "password" що відповідає "user.data.password")
-      if (!normalizedPattern.includes('*') && normalizedKey.endsWith('.' + normalizedPattern)) {
-        return true;
-      }
-
-      // Перевірка glob патерну
-      if (globToRegex(normalizedPattern).test(keyForPatternMatching)) {
-        return true;
-      }
+      if (this.matchesBlacklistStarPrefix(normalizedPattern, normalizedKey)) return true;
+      if (this.matchesBlacklistSuffix(normalizedPattern, normalizedKey)) return true;
+      if (globToRegex(normalizedPattern).test(keyForPatternMatching)) return true;
     }
 
-    // Також перевіряємо чи остання частина ключа відповідає патерну blacklist з префіксом wildcard
-    // наприклад, "users[*].password" має відповідати "*.password"
-    const keyParts = normalizedKey.split('.');
-    const lastKeyPart = keyParts[keyParts.length - 1];
-    for (const pattern of this.blacklistPatterns) {
-      const normalizedPattern = this.ignoreCase ? pattern.toLowerCase() : pattern;
-      if (normalizedPattern.startsWith('*.')) {
-        const patternKeyPart = normalizedPattern.slice(2);
-        if (lastKeyPart === patternKeyPart) {
-          return true;
-        }
-      }
-    }
-
-    return false;
+    const lastKeyPart = normalizedKey.split('.').at(-1);
+    return this.blacklistPatterns.some(pattern => {
+      const normalizedPattern = this.normalizePattern(pattern);
+      return normalizedPattern.startsWith('*.') && normalizedPattern.slice(2) === lastKeyPart;
+    });
   }
 
   /**
@@ -334,7 +262,7 @@ export class KeyPolicyValidator {
     let normalized = key;
     
     // Видаляємо префікс JSON pointer "$."
-    if (normalized.startsWith('$.') || normalized.startsWith('$.')) {
+    if (normalized.startsWith('$.') || normalized.startsWith('$[')) {
       normalized = normalized.slice(2);
     }
 

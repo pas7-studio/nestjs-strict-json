@@ -97,7 +97,7 @@ describe('Duplicate Key Detection Benchmarks', () => {
           try {
             parseStrictJson(shallowDuplicates);
             return; // Should not reach here
-          } catch (e) {
+          } catch {
             // Expected error - duplicate detected
             return;
           }
@@ -134,7 +134,7 @@ describe('Duplicate Key Detection Benchmarks', () => {
           try {
             parseStrictJson(json);
             return; // Should not reach here
-          } catch (e) {
+          } catch {
             // Expected error
             return;
           }
@@ -154,7 +154,7 @@ describe('Duplicate Key Detection Benchmarks', () => {
           try {
             parseStrictJson(json);
             return; // Should not reach here
-          } catch (e) {
+          } catch {
             // Expected error
             return;
           }
@@ -174,7 +174,7 @@ describe('Duplicate Key Detection Benchmarks', () => {
           try {
             parseStrictJson(json);
             return; // Should not reach here
-          } catch (e) {
+          } catch {
             // Expected error
             return;
           }
@@ -197,7 +197,7 @@ describe('Duplicate Key Detection Benchmarks', () => {
           try {
             parseStrictJson(json);
             return; // Should not reach here
-          } catch (e) {
+          } catch {
             // Expected error
             return;
           }
@@ -217,7 +217,7 @@ describe('Duplicate Key Detection Benchmarks', () => {
           try {
             parseStrictJson(json);
             return; // Should not reach here
-          } catch (e) {
+          } catch {
             // Expected error
             return;
           }
@@ -240,7 +240,7 @@ describe('Duplicate Key Detection Benchmarks', () => {
           try {
             parseStrictJson(json);
             return; // Should not reach here
-          } catch (e) {
+          } catch {
             // Expected error
             return;
           }
@@ -260,7 +260,7 @@ describe('Duplicate Key Detection Benchmarks', () => {
           try {
             parseStrictJson(json);
             return; // Should not reach here
-          } catch (e) {
+          } catch {
             // Expected error
             return;
           }
@@ -293,7 +293,7 @@ describe('Duplicate Key Detection Benchmarks', () => {
               if (hasDuplicate) {
                 throw new Error(`Failed to detect duplicate in: ${json}`);
               }
-            } catch (e) {
+            } catch {
               if (!hasDuplicate) {
                 throw new Error(`False positive in: ${json}`);
               }
@@ -321,7 +321,7 @@ describe('Duplicate Key Detection Benchmarks', () => {
       items: Array.from({ length: 1000 }, (_, i) => ({
         id: i,
         name: `Item ${i}`,
-        name: `Duplicate ${i}`, // Duplicate at every level
+        duplicateName: `Duplicate ${i}`, // Duplicate at every level
         value: Math.random()
       }))
     });
@@ -347,7 +347,7 @@ describe('Duplicate Key Detection Benchmarks', () => {
           try {
             parseStrictJson(largeJsonWithEarlyDuplicate);
             return; // Should not reach here
-          } catch (e) {
+          } catch {
             // Expected error
             return;
           }
@@ -373,7 +373,7 @@ describe('Duplicate Key Detection Benchmarks', () => {
       .add('Shallow Duplicates', 'With Duplicates', () => {
         try {
           parseStrictJson('{\n  "id": 1,\n  "id": 2\n}');
-        } catch (e) {
+        } catch {
           // Expected error
         }
       }, 1000)
@@ -384,21 +384,21 @@ describe('Duplicate Key Detection Benchmarks', () => {
       .add('Deep Duplicates', 'Level 2', () => {
         try {
           parseStrictJson(generateJsonWithDuplicateKeys(2));
-        } catch (e) {
+        } catch {
           // Expected error
         }
       }, 1000)
       .add('Deep Duplicates', 'Level 5', () => {
         try {
           parseStrictJson(generateJsonWithDuplicateKeys(5));
-        } catch (e) {
+        } catch {
           // Expected error
         }
       }, 500)
       .add('Deep Duplicates', 'Level 10', () => {
         try {
           parseStrictJson(generateJsonWithDuplicateKeys(10));
-        } catch (e) {
+        } catch {
           // Expected error
         }
       }, 200)
@@ -406,14 +406,14 @@ describe('Duplicate Key Detection Benchmarks', () => {
       .add('Large Duplicates', '100 Items', () => {
         try {
           parseStrictJson(generateLargeJsonWithDuplicates(100));
-        } catch (e) {
+        } catch {
           // Expected error
         }
       }, 200)
       .add('Large Duplicates', '500 Items', () => {
         try {
           parseStrictJson(generateLargeJsonWithDuplicates(500));
-        } catch (e) {
+        } catch {
           // Expected error
         }
       }, 50);

@@ -6,8 +6,8 @@ import { describe, it, expect } from 'vitest';
 import { runBenchmark, measurePeakMemory, BenchmarkSuite } from '../../utils/benchmark-runner.js';
 import { saveReports } from '../../utils/reporters.js';
 import { toJsonString } from '../../utils/generators.js';
-import { parseStrictJson, parseJsonStream } from '../../../src/index.js';
-import { Readable } from 'stream';
+import { parseStrictJson } from '../../../src/index.js';
+import { Readable } from 'node:stream';
 
 describe('Memory Usage Benchmarks', () => {
   const smallJson = toJsonString({
@@ -214,8 +214,8 @@ describe('Memory Usage Benchmarks', () => {
         results.push(result.memory);
 
         // Force garbage collection if available
-        if (global.gc) {
-          global.gc();
+        if (globalThis.gc) {
+          globalThis.gc();
         }
       }
 
@@ -286,7 +286,7 @@ describe('Memory Usage Benchmarks', () => {
         () => {
           try {
             parseStrictJson(jsonWithDuplicates);
-          } catch (e) {
+          } catch {
             // Expected error
           }
         },
@@ -303,7 +303,7 @@ describe('Memory Usage Benchmarks', () => {
         () => {
           try {
             parseStrictJson(jsonWithProtoPollution);
-          } catch (e) {
+          } catch {
             // Expected error
           }
         },

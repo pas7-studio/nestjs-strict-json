@@ -27,6 +27,20 @@ const readBody = async (
   return Buffer.concat(chunks);
 };
 
+const sendJson = (res: ServerResponse, statusCode: number, payload: unknown): void => {
+  res.statusCode = statusCode;
+  res.setHeader("content-type", "application/json; charset=utf-8");
+  res.end(JSON.stringify(payload));
+};
+
+const resolveErrorCode = (e: Error): string | null => {
+  if (e.message.includes("Duplicate key")) return "STRICT_JSON_DUPLICATE_KEY";
+  if (e.message.includes("Prototype pollution")) return "STRICT_JSON_PROTOTYPE_POLLUTION";
+  if (e.message.includes("Depth limit")) return "STRICT_JSON_DEPTH_LIMIT";
+  if (e.message.includes("is not allowed")) return "STRICT_JSON_KEY_NOT_ALLOWED";
+  return null;
+};
+
 export const createStrictJsonExpressMiddleware =
   (options?: StrictJsonOptions) =>
   async (
@@ -41,93 +55,53 @@ export const createStrictJsonExpressMiddleware =
     }
 
     try {
-      // Check content-length header to determine if streaming should be used
       const contentLength = req.headers["content-length"]
         ? Number.parseInt(req.headers["content-length"], 10)
         : undefined;
 
-      // Determine which parsing strategy to use
       if (shouldUseStreaming(contentLength, options)) {
-        // Use streaming parser for large payloads
         const parsed = await parseJsonStream(req, options);
         req.body = parsed;
-        next();
       } else {
-        // Use buffer parser for small payloads (backward compatible)
         const raw = await readBody(req, options?.maxBodySizeBytes);
         const parsed = parseStrictJson(raw, options);
         req.body = parsed;
-        next();
       }
+      next();
     } catch (e) {
       if (e instanceof StrictJsonError) {
-        const payload = {
+        sendJson(res, 400, {
           statusCode: 400,
           code: e.details.code,
           message: e.details.message,
           path: e.details.path,
           key: e.details.key,
           position: e.details.position,
-        };
-        res.statusCode = 400;
-        res.setHeader("content-type", "application/json; charset=utf-8");
-        res.end(JSON.stringify(payload));
+        });
         return;
       }
 
       if (e instanceof Error && e.message === "BODY_TOO_LARGE") {
-        res.statusCode = 413;
-        res.setHeader("content-type", "application/json; charset=utf-8");
-        res.end(
-          JSON.stringify({
-            statusCode: 413,
-            code: "STRICT_JSON_BODY_TOO_LARGE",
-            message: "Request body too large",
-          }),
-        );
+        sendJson(res, 413, {
+          statusCode: 413,
+          code: "STRICT_JSON_BODY_TOO_LARGE",
+          message: "Request body too large",
+        });
         return;
       }
 
-      // Handle streaming parser errors
       if (e instanceof Error) {
-        const isDuplicateKey = e.message.includes("Duplicate key");
-        const isPrototypePollution = e.message.includes("Prototype pollution");
-        const isDepthLimit = e.message.includes("Depth limit");
-        const isKeyNotAllowed = e.message.includes("is not allowed");
-
-        if (isDuplicateKey || isPrototypePollution || isDepthLimit || isKeyNotAllowed) {
-          let code: string;
-          if (isDuplicateKey) {
-            code = "STRICT_JSON_DUPLICATE_KEY";
-          } else if (isPrototypePollution) {
-            code = "STRICT_JSON_PROTOTYPE_POLLUTION";
-          } else if (isDepthLimit) {
-            code = "STRICT_JSON_DEPTH_LIMIT";
-          } else {
-            code = "STRICT_JSON_INVALID_JSON";
-          }
-
-          res.statusCode = 400;
-          res.setHeader("content-type", "application/json; charset=utf-8");
-          res.end(
-            JSON.stringify({
-              statusCode: 400,
-              code,
-              message: e.message,
-            }),
-          );
+        const code = resolveErrorCode(e);
+        if (code) {
+          sendJson(res, 400, { statusCode: 400, code, message: e.message });
           return;
         }
       }
 
-      res.statusCode = 400;
-      res.setHeader("content-type", "application/json; charset=utf-8");
-      res.end(
-        JSON.stringify({
-          statusCode: 400,
-          code: "STRICT_JSON_INVALID_JSON",
-          message: "Invalid JSON",
-        }),
-      );
+      sendJson(res, 400, {
+        statusCode: 400,
+        code: "STRICT_JSON_INVALID_JSON",
+        message: "Invalid JSON",
+      });
     }
   };

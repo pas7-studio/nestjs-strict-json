@@ -167,7 +167,6 @@ describe('StreamingJsonParser', () => {
     });
 
     it('should detect duplicate keys with multiple chunks', async () => {
-      const json = '{"name":"John","name":"Jane"}';
       const chunks = ['{"name":"John",', '"name":"Jane"}'];
       const parser = new StreamingJsonParser();
 
@@ -975,12 +974,10 @@ describe('parseLargePayload', () => {
       const buffer = Buffer.from(json);
       
       let handlerCalled = false;
-      let capturedError: Error | null = null;
       
       const options: StrictJsonOptions = {
-        onInvalidJson: (error) => {
+        onInvalidJson: () => {
           handlerCalled = true;
-          capturedError = error as Error;
         }
       };
       
@@ -996,9 +993,8 @@ describe('parseLargePayload', () => {
       let handlerCalled = false;
       
       const options: StrictJsonOptions = {
-        onError: (error) => {
+        onError: () => {
           handlerCalled = true;
-          void error;
         }
       };
       

@@ -25,7 +25,7 @@ class JsonParser {
     this.options = options;
   }
 
-  parse(input: string | Buffer, isAsync: boolean = false): Promise<unknown> | unknown {
+  parse(input: string | Buffer, isAsync: boolean = false): unknown {
     const maxBodySizeBytes = this.options?.maxBodySizeBytes;
     const buf = typeof input === "string" ? Buffer.from(input, "utf8") : input;
 

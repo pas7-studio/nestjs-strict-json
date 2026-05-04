@@ -115,7 +115,7 @@ describe('Optimization Benchmarks', () => {
       }
 
       // Lower depth should be faster
-      expect(results[0].time).toBeLessThan(results[results.length - 1].time);
+      expect(results[0].time).toBeLessThan(results.at(-1)!.time);
     });
   });
 
@@ -356,9 +356,10 @@ describe('Optimization Benchmarks', () => {
 
       for (const size of sizes) {
         const json = generateLargePayload(size);
-        const sizeLabel = size >= 1 * 1024 * 1024 ? '1MB' : 
-                          size >= 500 * 1024 ? '500KB' : 
-                          size >= 100 * 1024 ? '100KB' : '1KB';
+        const isLarge = size >= 1 * 1024 * 1024;
+        const isMedium = size >= 500 * 1024;
+        const isSmall = size >= 100 * 1024;
+        const sizeLabel = isLarge ? '1MB' : isMedium ? '500KB' : isSmall ? '100KB' : '1KB';
         
         const result = runBenchmark(
           'Size Scaling',

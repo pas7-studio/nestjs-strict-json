@@ -72,24 +72,24 @@ describe('PatternMatcher - Edge Cases', () => {
       expect(matcher.matches('arrayX0X')).toBe(false);
     });
 
-    it('повинен обробляти патерни з бекслешем (\\)', () => {
+    it(String.raw`повинен обробляти патерни з бекслешем (\)`, () => {
       const matcher = new PatternMatcher([String.raw`path\to`]);
       expect(matcher.matches(String.raw`path\to`)).toBe(true);
     });
   });
 
-  describe('Патерни з escaped символами (\\d, \\w, \\s)', () => {
-    it('повинен обробляти патерни з \\d (digit)', () => {
+  describe(String.raw`Патерни з escaped символами (\d, \w, \s)`, () => {
+    it(String.raw`повинен обробляти патерни з \d (digit)`, () => {
       const matcher = new PatternMatcher([String.raw`test\d`]);
       expect(matcher.matches(String.raw`test\d`)).toBe(true);
     });
 
-    it('повинен обробляти патерни з \\w (word)', () => {
+    it(String.raw`повинен обробляти патерни з \w (word)`, () => {
       const matcher = new PatternMatcher([String.raw`test\w`]);
       expect(matcher.matches(String.raw`test\w`)).toBe(true);
     });
 
-    it('повинен обробляти патерни з \\s (space)', () => {
+    it(String.raw`повинен обробляти патерни з \s (space)`, () => {
       const matcher = new PatternMatcher([String.raw`test\s`]);
       expect(matcher.matches(String.raw`test\s`)).toBe(true);
     });
@@ -661,16 +661,16 @@ describe('isKeyAllowed - Edge Cases', () => {
     });
   });
 
-  describe('Патерни з \\d, \\w, \\s escape sequences', () => {
-    it('повинен обробляти \\d в патерні', () => {
+  describe(String.raw`Патерни з \d, \w, \s escape sequences`, () => {
+    it(String.raw`повинен обробляти \d в патерні`, () => {
       expect(isKeyAllowed(String.raw`test\d`, [String.raw`test\d`])).toBe(true);
     });
 
-    it('повинен обробляти \\w в патерні', () => {
+    it(String.raw`повинен обробляти \w в патерні`, () => {
       expect(isKeyAllowed(String.raw`test\w`, [String.raw`test\w`])).toBe(true);
     });
 
-    it('повинен обробляти \\s в патерні', () => {
+    it(String.raw`повинен обробляти \s в патерні`, () => {
       expect(isKeyAllowed(String.raw`test\s`, [String.raw`test\s`])).toBe(true);
     });
 
@@ -867,32 +867,32 @@ describe('isKeyAllowed - Edge Cases', () => {
     });
   });
 
-  describe('Спеціальні символи (\\n, \\t, \\r) в ключах', () => {
-    it('повинен працювати з \\n (newline) в ключах', () => {
+  describe(String.raw`Спеціальні символи (\n, \t, \r) в ключах`, () => {
+    it(String.raw`повинен працювати з \n (newline) в ключах`, () => {
       expect(isKeyAllowed('data\nkey', ['data*'])).toBe(false); // KeyPolicyValidator використовує glob
       expect(isKeyAllowed('datakey', ['data*'])).toBe(true);
     });
 
-    it('повинен працювати з \\t (tab) в ключах', () => {
+    it(String.raw`повинен працювати з \t (tab) в ключах`, () => {
       expect(isKeyAllowed('data\tkey', ['data*'])).toBe(true);
     });
 
-    it('повинен працювати з \\r (carriage return) в ключах', () => {
+    it(String.raw`повинен працювати з \r (carriage return) в ключах`, () => {
       expect(isKeyAllowed('data\rkey', ['data*'])).toBe(false);
     });
   });
 
   describe('Escape sequences в ключах', () => {
     it('повинен працювати з escaped символами в ключах', () => {
-      expect(isKeyAllowed('data\\.key', ['data\\..*'])).toBe(false);
+      expect(isKeyAllowed(String.raw`data\.key`, [String.raw`data\..*`])).toBe(false);
     });
 
     it('повинен працювати з бекслешем в ключах', () => {
-      expect(isKeyAllowed('path\\to\\file', ['path*'])).toBe(true);
+      expect(isKeyAllowed(String.raw`path\to\file`, ['path*'])).toBe(true);
     });
 
     it('повинен працювати з комбінаціями escape sequences', () => {
-      expect(isKeyAllowed('path\\to\\file', ['path*'])).toBe(true);
+      expect(isKeyAllowed(String.raw`path\to\file`, ['path*'])).toBe(true);
     });
   });
 

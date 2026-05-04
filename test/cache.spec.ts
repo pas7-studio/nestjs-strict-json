@@ -155,12 +155,13 @@ describe('LRUCache - LRU Eviction', () => {
   });
 
   it('set() переміщує запис в кінець (LRU)', () => {
-    cache.set('key1', 1);
+    const lruKey = 'key1';
+    cache.set(lruKey, 1);
     cache.set('key2', 2);
     cache.set('key3', 3);
     
     // Оновлюємо key1, переміщуємо його в кінець
-    cache.set('key1', 100);
+    cache.set(lruKey, 100);
     
     // Додаємо новий запис, має видалити key2 (тепер найстаріший)
     cache.set('key4', 4);

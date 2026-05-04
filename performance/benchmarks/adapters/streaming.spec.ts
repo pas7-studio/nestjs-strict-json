@@ -12,7 +12,7 @@ import {
   toJsonString
 } from '../../utils/generators.js';
 import { parseStrictJson, parseJsonStream } from '../../../src/index.js';
-import { Readable } from 'stream';
+import { Readable } from 'node:stream';
 
 /**
  * Створює потік з JSON даними
@@ -300,7 +300,7 @@ describe('Streaming Parser Benchmarks', () => {
           try {
             const stream = createJsonStream(invalidJson);
             await parseJsonStream(stream);
-          } catch (e) {
+          } catch {
             // Expected error
             return;
           }
@@ -319,7 +319,7 @@ describe('Streaming Parser Benchmarks', () => {
           try {
             const stream = createJsonStream(duplicateKeyJson);
             await parseJsonStream(stream);
-          } catch (e) {
+          } catch {
             // Expected error
             return;
           }

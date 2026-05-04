@@ -11,8 +11,7 @@ import {
   generateLargeJson,
   toJsonString
 } from '../../utils/generators.js';
-import { registerStrictJsonFastify } from '../../../src/adapters/fastify.js';
-import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import type { FastifyRequest, FastifyReply } from 'fastify';
 
 /**
  * Створює фіктивний Fastify request об'єкт
@@ -310,7 +309,7 @@ describe('Fastify Adapter Benchmarks', () => {
         () => {
           try {
             simulateFastifyContentParser(invalidJson, defaultParser);
-          } catch (e) {
+          } catch {
             // Expected error
             return;
           }
@@ -328,7 +327,7 @@ describe('Fastify Adapter Benchmarks', () => {
         () => {
           try {
             simulateFastifyContentParser(duplicateKeyJson, defaultParser);
-          } catch (e) {
+          } catch {
             // Expected error
             return;
           }

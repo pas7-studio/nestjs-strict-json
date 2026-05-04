@@ -69,7 +69,7 @@ function parseWithObjectKeysCheck(jsonString: string): unknown {
       return;
     }
 
-    const keys = Object.keys(obj as object);
+    const keys = Object.keys(obj);
     const uniqueKeys = new Set(keys);
 
     if (keys.length !== uniqueKeys.size) {
@@ -132,24 +132,26 @@ function findDuplicateKeys(jsonString: string): boolean {
 
   if (!root || errors.length > 0) return false;
 
+  const checkObjectChildren = (node: ReturnType<typeof parseTree>): boolean => {
+    const seen = new Set<string>();
+    for (const prop of node.children ?? []) {
+      if (prop.type !== 'property' || !prop.children || prop.children.length < 2) continue;
+      const key = String(prop.children[0].value ?? '');
+      if (seen.has(key)) return false;
+      seen.add(key);
+      if (!checkNode(prop.children[1])) return false;
+    }
+    return true;
+  };
+
   const checkNode = (node: ReturnType<typeof parseTree>): boolean => {
     if (!node) return true;
-
-    if (node.type === 'object') {
-      const seen = new Set<string>();
-      for (const prop of node.children ?? []) {
-        if (prop.type !== 'property' || !prop.children || prop.children.length < 2) continue;
-        const key = String(prop.children[0].value ?? '');
-        if (seen.has(key)) return false;
-        seen.add(key);
-        if (!checkNode(prop.children[1])) return false;
-      }
-    } else if (node.type === 'array') {
+    if (node.type === 'object') return checkObjectChildren(node);
+    if (node.type === 'array') {
       for (const child of node.children ?? []) {
         if (!checkNode(child)) return false;
       }
     }
-
     return true;
   };
 

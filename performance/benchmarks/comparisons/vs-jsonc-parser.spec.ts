@@ -1,12 +1,12 @@
 import { describe, it } from 'vitest';
 import { parseStrictJson } from '../../../src/core/parser';
 import { parseTree } from 'jsonc-parser';
-import { performance } from 'perf_hooks';
+import { performance } from 'node:perf_hooks';
 
 describe('Performance: @pas7 vs jsonc-parser', () => {
   const smallJson = '{"name":"John","age":30}';
-  const mediumJson = JSON.stringify({ users: Array(1000).fill({ name: 'John', age: 30 }) });
-  const largeJson = JSON.stringify({ users: Array(10000).fill({ name: 'John', age: 30 }) });
+  const mediumJson = JSON.stringify({ users: new Array(1000).fill({ name: 'John', age: 30 }) });
+  const largeJson = JSON.stringify({ users: new Array(10000).fill({ name: 'John', age: 30 }) });
 
   it('small json - jsonc-parser parseTree', () => {
     const iterations = 10000;

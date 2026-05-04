@@ -13,11 +13,10 @@ import {
   generateDeepNestedJson,
   toJsonString
 } from '../../utils/generators.js';
-import { parseStrictJson, parseStrictJsonAsync, parseJsonStream } from '../../../src/index.js';
-import { Readable } from 'stream';
+import { parseStrictJson } from '../../../src/index.js';
+import { Readable } from 'node:stream';
 
 describe('Comparison: @pas7/nestjs-strict-json vs Native JSON.parse', () => {
-  const suite = new BenchmarkSuite();
 
   // Small JSON (~1KB)
   const smallJson = toJsonString(generateSmallJson());
@@ -55,7 +54,7 @@ describe('Comparison: @pas7/nestjs-strict-json vs Native JSON.parse', () => {
     });
 
     it('@pas7/nestjs-strict-json (streaming)', async () => {
-      const result = await runBenchmark(
+      const result = runBenchmark(
         'Small JSON (1KB)',
         '@pas7/nestjs-strict-json (streaming)',
         async () => {
@@ -98,7 +97,7 @@ describe('Comparison: @pas7/nestjs-strict-json vs Native JSON.parse', () => {
     });
 
     it('@pas7/nestjs-strict-json (streaming)', async () => {
-      const result = await runBenchmark(
+      const result = runBenchmark(
         'Medium JSON (100KB)',
         '@pas7/nestjs-strict-json (streaming)',
         async () => {
@@ -141,7 +140,7 @@ describe('Comparison: @pas7/nestjs-strict-json vs Native JSON.parse', () => {
     });
 
     it('@pas7/nestjs-strict-json (streaming)', async () => {
-      const result = await runBenchmark(
+      const result = runBenchmark(
         'Large JSON (1MB)',
         '@pas7/nestjs-strict-json (streaming)',
         async () => {
@@ -223,7 +222,7 @@ describe('Comparison: @pas7/nestjs-strict-json vs Native JSON.parse', () => {
     });
 
     it('@pas7/nestjs-strict-json (streaming)', async () => {
-      const result = await runBenchmark(
+      const result = runBenchmark(
         'Deep Nested (depth 20)',
         '@pas7/nestjs-strict-json (streaming)',
         async () => {
@@ -289,7 +288,7 @@ describe('Comparison: @pas7/nestjs-strict-json vs Native JSON.parse', () => {
     });
 
     it('@pas7/nestjs-strict-json (streaming) - Large payload', async () => {
-      const result = await runBenchmark(
+      const result = runBenchmark(
         'Memory Efficiency (1MB)',
         '@pas7/nestjs-strict-json (streaming)',
         async () => {

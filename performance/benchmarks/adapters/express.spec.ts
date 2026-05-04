@@ -51,8 +51,8 @@ function processRequestWithMiddleware(
   middleware: (req: Request, res: Response, next: NextFunction) => void,
   body: string
 ): void {
-  const req = createMockRequest(body) as Request;
-  const res = createMockResponse() as Response;
+  const req = createMockRequest(body);
+  const res = createMockResponse();
   const next = createMockNext();
 
   // Simulate body parsing in request
@@ -322,7 +322,7 @@ describe('Express Adapter Benchmarks', () => {
         () => {
           try {
             processRequestWithMiddleware(defaultMiddleware, invalidJson);
-          } catch (e) {
+          } catch {
             // Expected error
             return;
           }
@@ -340,7 +340,7 @@ describe('Express Adapter Benchmarks', () => {
         () => {
           try {
             processRequestWithMiddleware(defaultMiddleware, duplicateKeyJson);
-          } catch (e) {
+          } catch {
             // Expected error
             return;
           }

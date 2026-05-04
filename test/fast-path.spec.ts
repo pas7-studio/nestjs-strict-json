@@ -103,12 +103,6 @@ describe('Fast Path - Prototype Pollution Protection', () => {
   });
 
   it('Fast path виявляє кастомні небезпечні ключі', () => {
-    void '{"user": "John", "customDangerousKey": "value"}';
-    void { 
-      enableFastPath: true,
-      dangerousKeys: ['customDangerousKey']
-    };
-    
     // Примітка: fast path не використовує options.dangerousKeys, тільки дефолтні
     // Тому цей тест може не спрацювати - це обмеження fast path
     // Fast path використовує тільки __proto__, constructor, prototype
