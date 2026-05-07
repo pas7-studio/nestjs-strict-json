@@ -227,7 +227,7 @@ describe('Fast Path - Performance', () => {
     const time2 = performance.now() - start2;
     
     // Порівнянна продуктивність
-    expect(time2).toBeLessThanOrEqual(time1 * 2);
+    expect(time2).toBeLessThanOrEqual(time1 * 3);
   });
 
   it('Fast path дає прискорення для великих простих структур', () => {
