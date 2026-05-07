@@ -2,7 +2,7 @@
 
 `@pas7/nestjs-strict-json` is a strict JSON parser for **NestJS**, **Express**, and **Fastify**.
 
-> 📖 **Read our article**: [Understanding JSON Security Vulnerabilities and How We Solve Them](https://pas7.com.ua/blog/en/nestjs-strict-json) - deep dive into the problems this package solves.
+> **Read our article**: [Understanding JSON Security Vulnerabilities and How We Solve Them](https://pas7.com.ua/blog/en/nestjs-strict-json) - deep dive into the problems this package solves.
 
 It blocks dangerous and ambiguous payloads at parser level:
 - duplicate JSON keys
@@ -20,61 +20,8 @@ If you need secure JSON parsing in Node.js APIs, this package is built for that 
 [![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=pas7-studio_nestjs-strict-json&metric=reliability_rating&style=flat-square)](https://sonarcloud.io/summary/new_code?id=pas7-studio_nestjs-strict-json)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=pas7-studio_nestjs-strict-json&metric=coverage&style=flat-square)](https://sonarcloud.io/summary/new_code?id=pas7-studio_nestjs-strict-json)
 [![License](https://img.shields.io/github/license/pas7-studio/nestjs-strict-json?style=flat-square)](https://github.com/pas7-studio/nestjs-strict-json/blob/main/LICENSE)
-[![Tests](https://img.shields.io/badge/tests-551%20passing-brightgreen.svg)](https://github.com/pas7-studio/nestjs-strict-json/actions/workflows/test.yml)
+[![Tests](https://img.shields.io/badge/tests-551%20passing-brightgreen.svg)](https://github.com/pas7-studio/nestjs-strict-json/actions/workflows/ci.yml)
 [![Performance](https://img.shields.io/badge/performance-12.8x%20faster-blue.svg)](performance/reports/comparison-latest.md)
-
-## v1.1.0 - Features & Fixes
-
-### Breaking
-- `forRootAsync()` now requires `StrictJsonAsyncOptions` with `useFactory`/`inject`/`imports`
-
-### Bug Fixes
-- `ignoreCase` option now works in key validation
-- Sync streaming path no longer skips security validation (duplicate keys, prototype pollution, depth)
-
-### New Features
-- JSON variant content-types: `application/json-patch+json`, `application/vnd.api+json`, `application/merge-patch+json`, `application/problem+json`
-- `TypedErrorHandlerOptions` — typed generic error handlers
-- CI matrix: Node.js 20, 22, 24
-
-## v1.0.0 - Stable Release
-
-### Security
-- Zero SonarQube issues (bugs, vulnerabilities, code smells)
-- All 69 Security Hotspots resolved
-- SonarCloud Quality Gate: A ratings across Security, Reliability, Maintainability
-
-### Performance
-- Lazy cache key computation — SHA-256 skipped when caching disabled
-- Deduplicated sync/async parse paths
-- ~5% faster on typical workloads
-
-### Modern Stack
-- TypeScript 6.0, Vitest 4, ESLint 10, NestJS 11, Express 5, Fastify 5
-
-### Quality
-- 551 tests, 7 e2e tests — all passing
-- Individual option type interfaces exported (`ParserOptions`, `CacheOptions`, etc.)
-
-## v0.5.0 Highlights
-
-### Performance Breakthrough
-- **12.8x faster parsing** - optimized from 80.71ms to 6.30ms per operation
-- **85% less memory** - reduced peak heap from 146MB to 21MB
-- **Only 18% slower than native JSON.parse** (was 24x slower)
-- **Validator caching** - 40-45% faster validation with LRU cache
-
-### Critical Bug Fixes
-- **Memory leak fixed** - cleanup interval now properly disposed with `shutdownCacheManager()`
-- **Streaming duplicate validation** - correctly detects duplicate keys at all nesting levels
-
-### Cache Management API
-- `shutdownCacheManager()` - graceful shutdown of cleanup interval
-- `resetCacheManager()` - full reset for testing
-- `isCleanupIntervalRunning()` - diagnostics for interval state
-- `getCachedValidator()` - get or create cached validator
-- `clearValidatorCache()` - clear validator cache
-- `getValidatorCacheSize()` - get cache size
 
 ## Why teams use this
 
@@ -83,37 +30,7 @@ If you need secure JSON parsing in Node.js APIs, this package is built for that 
 - **Performance controls**: cache, lazy mode, streaming threshold, fast path.
 - **Typed and explicit errors**: stable error codes for monitoring and incident response.
 
-## 🚀 Performance
-
-| Scenario | v0.4.x Baseline | v0.5.0 Optimized | Improvement |
-|----------|-----------------|------------------|-------------|
-| Large JSON (1MB) | 80.71ms/op | 6.30ms/op | **12.8x faster** |
-| Memory (Peak Heap) | 146.61MB | 21.03MB | **85% less** |
-| vs Native JSON.parse | 24x slower | 1.18x slower | **95% closer** |
-
-## Benchmark Snapshot (Large Payload)
-
-Latest local benchmark (`2026-02-07`, payload `~1.24 MB`, 10,000 users):
-
-| Implementation | Avg ms/op | Peak heap delta (MB) | Retained heap (MB) |
-|---|---:|---:|---:|
-| Native `JSON.parse` | 3.7878 | 9.62 | -0.01 |
-| `jsonc-parser + JSON.parse` | 21.4828 | 49.11 | 0.00 |
-| `@pas7 strict (baseline)` | 76.1405 | 253.60 | 0.00 |
-| `@pas7 strict (optimized)` | 3.2743 | 61.80 | -0.00 |
-
-Key takeaways:
-- `@pas7 strict (optimized)` was faster than native in this run.
-- `@pas7 strict (optimized)` was much faster than `jsonc-parser + JSON.parse`.
-- Security checks and optimization profile significantly change results, so compare by scenario.
-
-Reproduce:
-
-```bash
-npm run bench:compare
-```
-
-## Security Capability Comparison
+## Security
 
 | Capability | Native `JSON.parse` | `express.json()` / default parsers | `@pas7/nestjs-strict-json` |
 |---|---|---|---|
@@ -124,23 +41,20 @@ npm run bench:compare
 | Unified behavior across Nest/Express/Fastify | No | Partial | Yes |
 | Structured parser error codes | No | Limited | Yes |
 
-## 🏆 Comparison with Competitors
+## Supported JSON Content-Types
 
-| Implementation | Avg ms/op (1MB) | Peak Heap (MB) | Relative Speed |
-|-------------|------------------|-----------------|----------------|
-| Native JSON.parse | 5.36 | 0.00 | 🚀 1.0x (baseline) |
-| **@pas7/nestjs-strict-json (v0.5.0)** | **6.30** | **21.03** | ✅ 0.85x (18% slower) |
-| jsonc-parser + JSON.parse | 51.18 | 112.88 | ⚠️ 0.10x (10x slower) |
-| @pas7/nestjs-strict-json (v0.4.x baseline) | 80.71 | 146.61 | ❌ 0.07x (24x slower) |
+| Content-Type | RFC | Supported |
+|---|---|---|
+| `application/json` | - | Yes |
+| `application/json-patch+json` | RFC 6902 | Yes |
+| `application/vnd.api+json` | JSON API | Yes |
+| `application/merge-patch+json` | RFC 7396 | Yes |
+| `application/problem+json` | RFC 7807 | Yes |
 
 ## Installation
 
 ```bash
-# Using npm
 npm install @pas7/nestjs-strict-json
-
-# Using bun (optional, faster)
-bun add @pas7/nestjs-strict-json
 ```
 
 ## Quick Start
@@ -177,6 +91,47 @@ async function bootstrap() {
 bootstrap();
 ```
 
+### NestJS Module (DI)
+
+```ts
+import { Module } from "@nestjs/common";
+import { StrictJsonModule } from "@pas7/nestjs-strict-json";
+
+@Module({
+  imports: [
+    StrictJsonModule.forRoot({
+      enableCache: true,
+      maxDepth: 20,
+      maxBodySizeBytes: 5 * 1024 * 1024,
+    }),
+  ],
+})
+export class AppModule {}
+```
+
+### NestJS Module (Async / ConfigModule)
+
+```ts
+import { Module } from "@nestjs/common";
+import { ConfigModule, ConfigService } from "@nestjs/config";
+import { StrictJsonModule } from "@pas7/nestjs-strict-json";
+
+@Module({
+  imports: [
+    ConfigModule.forRoot(),
+    StrictJsonModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (config: ConfigService) => ({
+        enableCache: config.get("STRICT_JSON_CACHE_ENABLED", true),
+        maxDepth: config.get("STRICT_JSON_MAX_DEPTH", 20),
+      }),
+      inject: [ConfigService],
+    }),
+  ],
+})
+export class AppModule {}
+```
+
 ### Vanilla Express
 
 ```ts
@@ -185,13 +140,11 @@ import { createStrictJsonExpressMiddleware } from "@pas7/nestjs-strict-json";
 
 const app = express();
 
-app.use(
-  createStrictJsonExpressMiddleware({
-    maxBodySizeBytes: 1024 * 1024,
-    enableStreaming: true,
-    streamingThreshold: 100 * 1024,
-  }),
-);
+app.use(createStrictJsonExpressMiddleware({
+  maxBodySizeBytes: 1024 * 1024,
+  enableStreaming: true,
+  streamingThreshold: 100 * 1024,
+}));
 
 app.post("/api", (req, res) => {
   res.json({ received: req.body });
@@ -226,22 +179,22 @@ server.listen({ port: 3000 });
 - `createStrictJsonExpressMiddleware(options?)`
 - `registerStrictJsonFastify(instance, options?)`
 
-### Core parser integration
+### Core parser
 
 - `parseStrictJson(raw, options?)`
 - `parseStrictJsonAsync(raw, options?)`
 - `clearParseCache()`
 - `getParseCacheSize()`
+- `shutdownCacheManager()`
+- `resetCacheManager()`
+- `isCleanupIntervalRunning()`
 
-### Cache management (v0.5.0+)
+### Validation utilities
 
-- `shutdownCacheManager()` - graceful shutdown of cleanup interval (call on app shutdown)
-- `resetCacheManager()` - full cache reset for testing
-- `isCleanupIntervalRunning()` - check if cleanup interval is active
-- `getCachedValidator(key)` - get or create cached validator
-- `clearValidatorCache()` - clear validator cache
-- `getParseCacheSize()` - get current cache size
-- Individual option type interfaces: `ParserOptions`, `CacheOptions`, `StreamingOptions`, `LazyOptions`, `FilteringOptions`, `ErrorHandlerOptions`
+- `isKeyAllowed(keyPath, whitelist?, blacklist?, ignoreCase?)`
+- `createKeyPolicyValidator(whitelist?, blacklist?, ignoreCase?)`
+- `globToRegex(pattern)`
+- `matchGlobPattern(path, pattern)`
 
 ## StrictJsonOptions
 
@@ -290,7 +243,7 @@ type StrictJsonOptions = {
 - `STRICT_JSON_PROTOTYPE_POLLUTION`
 - `STRICT_JSON_DEPTH_LIMIT`
 
-## Recommended Production Profile
+## Recommended Production Configuration
 
 ```ts
 registerStrictJson(app, {
@@ -304,29 +257,41 @@ registerStrictJson(app, {
 
 ## Compatibility
 
-- Node.js 20+
-- NestJS 10+ (tested with 11.x)
-- Express 5+ (tested with 5.x)
-- Fastify 5+ (tested with 5.x)
-- TypeScript 5.x / 6.x
+| Platform | Version |
+|---|---|
+| Node.js | 20+ |
+| NestJS | 10+ |
+| Express | 5+ |
+| Fastify | 5+ |
+| TypeScript | 5.x / 6.x |
 
-## 📚 Documentation
+## Performance
 
-- [User Guide](README.md) - current file
-- [Optimization Guide](docs/OPTIMIZATION-GUIDE.md) - detailed optimization guide
-- [Performance Report](performance/reports/comparison-latest.md) - detailed performance report
-- 📖 [Article: Understanding JSON Security Vulnerabilities](https://pas7.com.ua/blog/en/nestjs-strict-json) - deep dive into the problems this package solves
+| Implementation | Avg ms/op (1MB) | Relative Speed |
+|---|---|---|
+| Native JSON.parse | 5.36 | 1.0x (baseline) |
+| **@pas7/nestjs-strict-json** | **6.30** | **0.85x (18% slower)** |
+| jsonc-parser + JSON.parse | 51.18 | 0.10x (10x slower) |
 
-## 🤝 Support
+Reproduce:
 
-For support, please:
-- Open an [issue](https://github.com/pas7-studio/nestjs-strict-json/issues)
-- [Contact us](https://pas7.com.ua/contact) via our website
+```bash
+npm run bench:compare
+```
 
-## 🏢 Maintained by
+## Documentation
 
-[PAS7](https://pas7.com.ua/) - Software development company
+- [Wiki](https://github.com/pas7-studio/nestjs-strict-json/wiki) - comprehensive guides
+- [CHANGELOG](CHANGELOG.md) - version history and release notes
+- [Optimization Guide](docs/OPTIMIZATION-GUIDE.md) - detailed tuning
+- [Performance Report](performance/reports/comparison-latest.md) - benchmarks
+- [Article: JSON Security Vulnerabilities](https://pas7.com.ua/blog/en/nestjs-strict-json) - deep dive
+
+## Support
+
+- [Issues](https://github.com/pas7-studio/nestjs-strict-json/issues) - report bugs or request features
+- [Contact](https://pas7.com.ua/contact) - via our website
 
 ## License
 
-Apache-2.0
+[Apache-2.0](LICENSE) | Maintained by [PAS7](https://pas7.com.ua/)
