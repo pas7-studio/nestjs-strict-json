@@ -33,32 +33,42 @@ const buildErrorPayload = (d: { code: string; message: string; path?: string; ke
   };
 };
 
+const JSON_CONTENT_TYPES = [
+  'application/json',
+  'application/json-patch+json',
+  'application/vnd.api+json',
+  'application/merge-patch+json',
+  'application/problem+json',
+];
+
 export const registerStrictJsonFastify = (
   instance: FastifyLikeInstance,
   options?: StrictJsonOptions,
 ): void => {
-  instance.addContentTypeParser(
-    "application/json",
-    { parseAs: "buffer" },
-    (_req, body, done) => {
-      try {
-        const parsed = parseStrictJson(body, options);
-        done(null, parsed);
-      } catch (e) {
-        if (e instanceof StrictJsonError) {
-          const payload = buildErrorPayload(e.details);
+  for (const contentType of JSON_CONTENT_TYPES) {
+    instance.addContentTypeParser(
+      contentType,
+      { parseAs: "buffer" },
+      (_req, body, done) => {
+        try {
+          const parsed = parseStrictJson(body, options);
+          done(null, parsed);
+        } catch (e) {
+          if (e instanceof StrictJsonError) {
+            const payload = buildErrorPayload(e.details);
 
-          if (e.details.code === "STRICT_JSON_BODY_TOO_LARGE") {
-            done(new PayloadTooLargeException(payload));
+            if (e.details.code === "STRICT_JSON_BODY_TOO_LARGE") {
+              done(new PayloadTooLargeException(payload));
+              return;
+            }
+
+            done(new BadRequestException(payload));
             return;
           }
 
-          done(new BadRequestException(payload));
-          return;
+          done(e instanceof Error ? e : new Error("Strict JSON error"));
         }
-
-        done(e instanceof Error ? e : new Error("Strict JSON error"));
-      }
-    },
-  );
+      },
+    );
+  }
 };

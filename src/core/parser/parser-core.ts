@@ -159,7 +159,7 @@ function validateKeyForNode(
   options?: StrictJsonOptions,
 ): void {
   if (config.shouldValidateKeyPolicy) {
-    if (!isKeyAllowed(keyPath, options?.whitelist, options?.blacklist)) {
+    if (!isKeyAllowed(keyPath, options?.whitelist, options?.blacklist, options?.ignoreCase)) {
       throw new InvalidJsonError(`Key '${key}' at ${keyPath} is not allowed`);
     }
   }

@@ -121,7 +121,9 @@ describe('StrictJsonModule - forRootAsync', () => {
   });
 
   it('should return a DynamicModule without options', () => {
-    const module = StrictJsonModule.forRootAsync();
+    const module = StrictJsonModule.forRootAsync({
+      useFactory: () => ({}),
+    });
     
     expect(module).toBeDefined();
     expect(module.module).toBe(StrictJsonModule);
@@ -131,44 +133,60 @@ describe('StrictJsonModule - forRootAsync', () => {
   });
 
   it('should export STRICT_JSON_OPTIONS in exports array', () => {
-    const module = StrictJsonModule.forRootAsync();
+    const module = StrictJsonModule.forRootAsync({
+      useFactory: () => ({}),
+    });
     expect(module.exports).toContain(STRICT_JSON_OPTIONS);
   });
 
   it('should export STRICT_JSON_CACHE in exports array', () => {
-    const module = StrictJsonModule.forRootAsync();
+    const module = StrictJsonModule.forRootAsync({
+      useFactory: () => ({}),
+    });
     expect(module.exports).toContain(STRICT_JSON_CACHE);
   });
 
   it('should export StrictJsonCacheService in exports array', () => {
-    const module = StrictJsonModule.forRootAsync();
+    const module = StrictJsonModule.forRootAsync({
+      useFactory: () => ({}),
+    });
     expect(module.exports).toContain(StrictJsonCacheService);
   });
 
   it('should set global: true', () => {
-    const module = StrictJsonModule.forRootAsync();
+    const module = StrictJsonModule.forRootAsync({
+      useFactory: () => ({}),
+    });
     expect(module.global).toBe(true);
   });
 
   it('should have providers array with 3 items', () => {
-    const module = StrictJsonModule.forRootAsync();
+    const module = StrictJsonModule.forRootAsync({
+      useFactory: () => ({}),
+    });
     expect(module.providers).toHaveLength(3);
   });
 
   it('should have STRICT_JSON_CACHE provider', () => {
-    const module = StrictJsonModule.forRootAsync();
+    const module = StrictJsonModule.forRootAsync({
+      useFactory: () => ({}),
+    });
     const cacheProvider = module.providers?.find((p: any) => p.provide === STRICT_JSON_CACHE);
     expect(cacheProvider).toBeDefined();
   });
 
   it('should have STRICT_JSON_OPTIONS provider', () => {
-    const module = StrictJsonModule.forRootAsync();
+    const module = StrictJsonModule.forRootAsync({
+      useFactory: () => ({}),
+    });
     const optionsProvider = module.providers?.find((p: any) => p.provide === STRICT_JSON_OPTIONS);
     expect(optionsProvider).toBeDefined();
   });
 
   it('should have StrictJsonCacheService provider', () => {
-    const module = StrictJsonModule.forRootAsync();
+    const module = StrictJsonModule.forRootAsync({
+      useFactory: () => ({}),
+    });
     const serviceProvider = module.providers?.find((p: any) => p === StrictJsonCacheService || p.provide === StrictJsonCacheService);
     expect(serviceProvider).toBeDefined();
   });
@@ -454,9 +472,9 @@ describe('StrictJsonModule - edge cases', () => {
   });
 
   it('should allow calling forRootAsync() multiple times', () => {
-    const module1 = StrictJsonModule.forRootAsync({ cacheSize: 1500 });
-    const module2 = StrictJsonModule.forRootAsync({ cacheSize: 2500 });
-    const module3 = StrictJsonModule.forRootAsync();
+    const module1 = StrictJsonModule.forRootAsync({ useFactory: () => ({ cacheSize: 1500 }) });
+    const module2 = StrictJsonModule.forRootAsync({ useFactory: () => ({ cacheSize: 2500 }) });
+    const module3 = StrictJsonModule.forRootAsync({ useFactory: () => ({}) });
 
     expect(module1).toBeDefined();
     expect(module2).toBeDefined();
@@ -497,7 +515,9 @@ describe('StrictJsonModule - provider values', () => {
 
 describe('StrictJsonModule - forRootAsync factory', () => {
   it('should have useFactory for STRICT_JSON_CACHE', () => {
-    const module = StrictJsonModule.forRootAsync();
+    const module = StrictJsonModule.forRootAsync({
+      useFactory: () => ({}),
+    });
     
     const cacheProvider = module.providers?.find((p: any) => p.provide === STRICT_JSON_CACHE);
     expect(cacheProvider?.useFactory).toBeDefined();
@@ -505,18 +525,23 @@ describe('StrictJsonModule - forRootAsync factory', () => {
   });
 
   it('should inject STRICT_JSON_OPTIONS into cache factory', () => {
-    const module = StrictJsonModule.forRootAsync();
-    
+    const module = StrictJsonModule.forRootAsync({
+      useFactory: () => ({}),
+    });
+
     const cacheProvider = module.providers?.find((p: any) => p.provide === STRICT_JSON_CACHE);
     expect(cacheProvider?.inject).toContain(STRICT_JSON_OPTIONS);
   });
 
   it('should set correct options value for forRootAsync', () => {
     const options = { maxDepth: 25, enableCache: true };
-    const module = StrictJsonModule.forRootAsync(options);
+    const module = StrictJsonModule.forRootAsync({
+      useFactory: () => options,
+    });
     
     const optionsProvider = module.providers?.find((p: any) => p.provide === STRICT_JSON_OPTIONS);
-    expect(optionsProvider?.useValue).toEqual(options);
+    expect(optionsProvider?.useFactory).toBeDefined();
+    expect(typeof optionsProvider?.useFactory).toBe('function');
   });
 });
 

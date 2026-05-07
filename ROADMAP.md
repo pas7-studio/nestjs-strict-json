@@ -1,104 +1,90 @@
 <!-- File: ROADMAP.md -->
 # ROADMAP - @pas7/nestjs-strict-json
 
-## Підсумок та контекст
+## Summary & Context
 
-Цей документ описує стратегію розвитку бібліотеки `@pas7/nestjs-strict-json` - middleware/content parser для NestJS, Express та Fastify, який виявляє дублікатні ключі в JSON-запитах на ранньому етапі обробки.
+This document describes the development strategy for `@pas7/nestjs-strict-json` — a middleware/content parser for NestJS, Express, and Fastify that detects duplicate keys in JSON requests at an early processing stage.
 
-### Поточний стан
+### Current State
 
-- **Версія**: v0.2.x (staging)
-- **Покриття тестами**: Комплексні unit та e2e тести
-- **Підтримувані платформи**: NestJS 10+, Express 4+, Fastify 4+, Node.js 20+
-- **Залежності**: Мінімальні (лише `jsonc-parser` для production)
-- **Стабільність**: Production-ready для використання з NestJS та Fastify
+- **Version**: v1.0.x (stable)
+- **Test coverage**: Comprehensive unit and e2e tests (551 passing)
+- **Supported platforms**: NestJS 10+, Express 4+/5+, Fastify 4+, Node.js 20+
+- **Dependencies**: Minimal (only `jsonc-parser` for production)
+- **Stability**: Production-ready for use with NestJS and Fastify
 
-### Поточні обмеження
+### Current Limitations
 
-1. **Express адаптер не streaming** - зчитує весь body в пам'ять перед парсингом
-2. **Обмежені опції конфігурації** - тільки `maxBodySizeBytes`
-3. **Немає інтеграції з NestJS exception filters**
-4. **Обмежена підтримка content-type** - тільки `application/json`
-5. **Відсутність телеметрії та метрик**
-6. **Не підтримує інші фреймворки** (Hapi, Koa, native HTTP)
+1. **Express adapter is not fully streaming** — reads the entire body into memory before parsing
+2. **Limited content-type support** — now expanded to JSON variant types
+3. **No integration with NestJS exception filters**
+4. **No telemetry or metrics**
+5. **Does not support other frameworks** (Hapi, Koa, native HTTP)
 
 ---
 
-## Стратегічні вектори розвитку
+## Strategic Development Vectors
 
-### Вектор 1: Покращення основної функціональності ⭐⭐⭐
+### Vector 1: Core Functionality Improvements ⭐⭐⭐
 
-**Ціль**: Усунення критичних обмежень та покращення продуктивності для production-використання
+**Goal**: Eliminate critical limitations and improve performance for production use
 
-#### 1.1 Streaming parser для Express 🔴 HIGH PRIORITY
+#### 1.1 Streaming Parser for Express 🔴 HIGH PRIORITY
 
-**Проблема**: Поточна реалізація [`express.ts`](src/adapters/express.ts:10-27) зчитує весь body в пам'ять, що критично для великих payloads (>1MB)
+**Problem**: The current [`express.ts`](src/adapters/express.ts) implementation reads the entire body into memory, which is critical for large payloads (>1MB)
 
-**Рішення**: Реалізувати streaming парсер з використанням Node.js TransformStream
+**Solution**: Implement a streaming parser using Node.js TransformStream
 
-**Технічний підхід**:
+**Technical approach**:
 ```typescript
-// Псевдокод для streaming parser
+// Pseudocode for streaming parser
 class StreamingJsonParser extends Transform {
   _transform(chunk, encoding, callback) {
-    // Потокова обробка та виявлення дублікатів
+    // Stream processing and duplicate detection
     callback(null, chunk);
   }
 }
 ```
 
-**Критерії успіху**:
-- Memory footprint зменшено на 80%+ для payloads >1MB
-- Backward compatibility з існуючим API
-- Продуктивність не менша за поточну для малих payloads (<100KB)
+**Success criteria**:
+- Memory footprint reduced by 80%+ for payloads >1MB
+- Backward compatibility with existing API
+- Performance not lower than current for small payloads (<100KB)
 
-**Оціночна складність**: 3-4 тижні
-**Вплив**: Критичний для продакшену
+**Estimated complexity**: 3-4 weeks
+**Impact**: Critical for production
 
 ---
 
-#### 1.2 Розширені опції конфігурації 🟡 MEDIUM PRIORITY
+#### 1.2 Extended Configuration Options 🟡 MEDIUM PRIORITY ✅ DONE
 
-**Можливості**:
+**Features**:
 ```typescript
 interface StrictJsonOptions {
-  // Існуючі
+  // Existing
   maxBodySizeBytes?: number;
   
-  // Нові опції
-  whitelist?: string[];           // Дозволені ключі (glob patterns)
-  blacklist?: string[];           // Заборонені ключі
-  maxDepth?: number;              // Максимальна глибина вкладеності (захист від DoS)
-  strictMode?: boolean;           // Режим суворості (default: true)
-  ignoreCase?: boolean;           // Чутливість до регістру для дублікатів
-  allowedContentTypes?: string[]; // Дозволені content-type
-  enableStrictMode?: boolean;     // Toggle для prototype pollution protection
+  // New options (implemented)
+  whitelist?: string[];           // Allowed keys (glob patterns)
+  blacklist?: string[];           // Forbidden keys
+  maxDepth?: number;              // Maximum nesting depth (DoS protection)
+  ignoreCase?: boolean;           // Case sensitivity for duplicate detection
+  enableFastPath?: boolean;       // Optimized path for simple JSON
 }
 ```
 
-**Використання**:
-```typescript
-StrictJsonModule.forRoot({
-  maxBodySizeBytes: 1024 * 1024,
-  whitelist: ['user.*', 'profile.*'],
-  blacklist: ['password', 'secret.*'],
-  maxDepth: 10,
-  ignoreCase: false
-})
-```
-
-**Оціночна складність**: 1-2 тижні
-**Вплив**: Покращення DX та гнучкості
+**Estimated complexity**: 1-2 weeks
+**Impact**: DX and flexibility improvement
 
 ---
 
-#### 1.3 Custom error handlers 🟡 MEDIUM PRIORITY
+#### 1.3 Custom Error Handlers 🟡 MEDIUM PRIORITY ✅ DONE
 
-**Функціональність**:
-- Callback для кожного типу помилки
-- Можливість форматування відповідей
-- Custom error codes та messages
-- Локалізація error messages
+**Features**:
+- Callback for each error type
+- Ability to format responses
+- Custom error codes and messages
+- Error message localization
 
 **API**:
 ```typescript
@@ -106,35 +92,25 @@ interface StrictJsonOptions {
   onDuplicateKey?: (error: DuplicateKeyError) => void | Promise<void>;
   onInvalidJson?: (error: InvalidJsonError) => void | Promise<void>;
   onBodyTooLarge?: (error: BodyTooLargeError) => void | Promise<void>;
+  onPrototypePollution?: (error: PrototypePollutionError) => void | Promise<void>;
   onError?: (error: StrictJsonError) => void | Promise<void>;
 }
 ```
 
-**Приклад**:
-```typescript
-StrictJsonModule.forRoot({
-  onDuplicateKey: (error) => {
-    logger.warn(`Duplicate key detected: ${error.key} at ${error.path}`);
-    // Send to Sentry
-    Sentry.captureException(error);
-  }
-})
-```
-
-**Оціночна складність**: 1 тиждень
-**Вплив**: Покращення DX та інтеграції
+**Estimated complexity**: 1 week
+**Impact**: DX and integration improvement
 
 ---
 
-#### 1.4 Покращення повідомлень про помилки 🟢 LOW PRIORITY
+#### 1.4 Improved Error Messages 🟢 LOW PRIORITY
 
-**Можливості**:
-- JSON Pointer path в error response (`$.a.b.c[0].key`)
-- Інтерактивні приклади виправлення
+**Features**:
+- JSON Pointer path in error response (`$.a.b.c[0].key`)
+- Interactive fix suggestions
 - Localized error messages (en, uk, ru, ...)
-- Contextual hints для розробників
+- Contextual hints for developers
 
-**Приклад відповіді**:
+**Example response**:
 ```json
 {
   "statusCode": 400,
@@ -149,97 +125,92 @@ StrictJsonModule.forRoot({
 }
 ```
 
-**Оціночна складність**: 3-4 дні
-**Вплив**: Покращення DX
+**Estimated complexity**: 3-4 days
+**Impact**: DX improvement
 
 ---
 
-### Вектор 2: Розширення екосистеми ⭐⭐
+### Vector 2: Ecosystem Expansion ⭐⭐
 
-**Ціль**: Підтримка більшої кількості фреймворків та use cases
+**Goal**: Support more frameworks and use cases
 
-#### 2.1 Додаткові JSON content-type підтримка 🟡 MEDIUM PRIORITY
+#### 2.1 Additional JSON Content-Type Support 🟡 MEDIUM PRIORITY ✅ DONE
 
-**Формати**:
+**Formats**:
 - `application/json-patch+json` (RFC 6902)
 - `application/merge-patch+json` (RFC 7396)
 - `application/problem+json` (RFC 7807)
 - `application/vnd.api+json` (JSON API)
 
-**Реалізація**: Розширити [`registerStrictJson()`](src/nest/register.ts:16) для підтримки multiple content-types
-
-**Оціночна складність**: 1 тиждень
-**Вплив**: Розширення use cases
-
 ---
 
-#### 2.2 Hapi adapter 🟡 MEDIUM PRIORITY
+#### 2.2 Hapi Adapter 🟡 MEDIUM PRIORITY
 
-**Реалізація**: Аналогічно до [`fastify.ts`](src/adapters/fastify.ts:21)
+**Implementation**: Similar to [`fastify.ts`](src/adapters/fastify.ts)
 
 ```typescript
 // src/adapters/hapi.ts
 export const registerStrictJsonHapi = (server: Server, options?: StrictJsonOptions) => {
   server.ext('onRequest', async (request, h) => {
-    // Виявлення дублікатів для Hapi
+    // Duplicate detection for Hapi
   });
 }
 ```
 
-**Оціночна складність**: 1-2 тижні
-**Вплив**: Розширення аудиторії
+**Estimated complexity**: 1-2 weeks
+**Impact**: Audience expansion
 
 ---
 
-#### 2.3 Koa adapter 🟡 MEDIUM PRIORITY
+#### 2.3 Koa Adapter 🟡 MEDIUM PRIORITY
 
-**Реалізація**: Middleware pattern
+**Implementation**: Middleware pattern
 
 ```typescript
 // src/adapters/koa.ts
 export const createStrictJsonKoaMiddleware = (options?: StrictJsonOptions) => {
   return async (ctx: Context, next: Next) => {
-    // Виявлення дублікатів для Koa
+    // Duplicate detection for Koa
     await next();
   };
 }
 ```
 
-**Оціночна складність**: 1-2 тижні
-**Вплив**: Розширення аудиторії
+**Estimated complexity**: 1-2 weeks
+**Impact**: Audience expansion
 
 ---
 
-#### 2.4 Node.js native HTTP server 🟢 LOW PRIORITY
+#### 2.4 Node.js Native HTTP Server 🟢 LOW PRIORITY
 
-**Реалізація**: Raw HTTP handler
+**Implementation**: Raw HTTP handler
 
 ```typescript
 // src/adapters/native.ts
 export const createStrictJsonNativeHandler = (options?: StrictJsonOptions) => {
   return (req: IncomingMessage, res: ServerResponse) => {
-    // Виявлення дублікатів для native HTTP
+    // Duplicate detection for native HTTP
   };
 }
 ```
 
-**Оціночна складність**: 3-4 дні
-**Вплив**: Максимальна гнучкість
+**Estimated complexity**: 3-4 days
+**Impact**: Maximum flexibility
 
 ---
 
-### Вектор 3: Інтеграції та інструменти ⭐⭐
+### Vector 3: Integrations & Tools ⭐⭐
 
-**Ціль**: Покращення DX та інтеграції з NestJS екосистемою
+**Goal**: Improve DX and integration with the NestJS ecosystem
 
-#### 3.1 NestJS exception filters інтеграція 🟡 MEDIUM PRIORITY
+#### 3.1 NestJS Exception Filters Integration 🟡 MEDIUM PRIORITY
 
-**Функціональність**:
-- Автоматична робота з `@nestjs/common` exception filters
-- `@UseFilters()` підтримка
-- Custom exception filters з StrictJsonError
+**Features**:
+- Automatic work with `@nestjs/common` exception filters
+- `@UseFilters()` support
+- Custom exception filters with StrictJsonError
 
-**Реалізація**: Додати декоратор `@StrictJson()` та інтеграцію з exception filters
+**Implementation**: Add a `@StrictJson()` decorator and exception filter integration
 
 ```typescript
 @StrictJson()
@@ -247,7 +218,7 @@ export const createStrictJsonNativeHandler = (options?: StrictJsonOptions) => {
 export class UsersController {
   @Post()
   create(@Body() dto: CreateUserDto) {
-    // Автоматична обробка StrictJsonError
+    // Automatic StrictJsonError handling
   }
 }
 
@@ -260,18 +231,18 @@ export class StrictJsonExceptionFilter implements ExceptionFilter {
 }
 ```
 
-**Оціночна складність**: 1-2 тижні
-**Вплив**: Критичне для NestJS екосистеми
+**Estimated complexity**: 1-2 weeks
+**Impact**: Critical for NestJS ecosystem
 
 ---
 
-#### 3.2 Rate limiting hooks 🟢 LOW PRIORITY
+#### 3.2 Rate Limiting Hooks 🟢 LOW PRIORITY
 
-**Інтеграція**: 
+**Integration**:
 - @nestjs/throttler
-- IP-based rate limiting на рівні парсера
+- IP-based rate limiting at parser level
 
-**Реалізація**: Hooks для rate limiting перед парсингом
+**Implementation**: Hooks for rate limiting before parsing
 
 ```typescript
 interface StrictJsonOptions {
@@ -281,60 +252,60 @@ interface StrictJsonOptions {
 }
 ```
 
-**Оціночна складність**: 3-4 дні
-**Вплив**: Покращення безпеки
+**Estimated complexity**: 3-4 days
+**Impact**: Security improvement
 
 ---
 
-#### 3.3 CLI tool для перевірки JSON files 🟢 LOW PRIORITY
+#### 3.3 CLI Tool for JSON File Validation 🟢 LOW PRIORITY
 
-**Функціональність**:
+**Features**:
 ```bash
-# Перевірка одного файлу
+# Check a single file
 npx @pas7/nestjs-strict-json check file.json
 
-# Перевірка директорії
+# Check a directory
 npx @pas7/nestjs-strict-json check ./data --recursive
 
-# CI/CD інтеграція
+# CI/CD integration
 npx @pas7/nestjs-strict-json check ./api-specs --fail-on-error
 ```
 
-**Вивід**:
+**Output**:
 ```
 ✓ file.json: Valid
 ✗ invalid.json: Duplicate key 'user' at $.data[0].user
   Position: Line 15, Column 8
 ```
 
-**Оціночна складність**: 1 тиждень
-**Вплив**: Покращення DX для розробників
+**Estimated complexity**: 1 week
+**Impact**: Developer DX improvement
 
 ---
 
-#### 3.4 VS Code extension 🟢 LOW PRIORITY
+#### 3.4 VS Code Extension 🟢 LOW PRIORITY
 
-**Функціональність**:
-- Підсвічування дублікатних ключів в real-time
+**Features**:
+- Real-time duplicate key highlighting
 - Quick fix suggestions
 - JSON schema validation
-- Inline hints для розробників
+- Inline hints for developers
 
-**Оціночна складність**: 2-3 тижні
-**Вплив**: Покращення DX
+**Estimated complexity**: 2-3 weeks
+**Impact**: DX improvement
 
 ---
 
-### Вектор 4: Валідація та безпека ⭐
+### Vector 4: Validation & Security ⭐
 
-**Ціль**: Розширення валідації та захист від додаткових атак
+**Goal**: Expand validation and protect against additional attacks
 
-#### 4.1 JSON Schema інтеграція 🟡 MEDIUM PRIORITY
+#### 4.1 JSON Schema Integration 🟡 MEDIUM PRIORITY
 
-**Функціональність**:
-- Валідація JSON schema на рівні парсера
-- Підтримка Draft 7/2019-09/2020-12
-- Можливість додати schema в опцію
+**Features**:
+- JSON schema validation at parser level
+- Support for Draft 7/2019-09/2020-12
+- Ability to add schema via option
 
 **API**:
 ```typescript
@@ -353,60 +324,36 @@ StrictJsonModule.forRoot({
 })
 ```
 
-**Оціночна складність**: 3-4 тижні
-**Вплив**: Розширення валідації
+**Estimated complexity**: 3-4 weeks
+**Impact**: Validation expansion
 
 ---
 
-#### 4.2 Recursion depth limits 🟡 MEDIUM PRIORITY
+#### 4.2 Recursion Depth Limits ✅ DONE
 
-**Функціональність**:
-- Захист від DoS через глибоку вкладеність
+**Features**:
+- DoS protection via deep nesting
 - Configurable `maxDepth`
-- Smart limits based на body size
-
-**API**:
-```typescript
-interface StrictJsonOptions {
-  maxDepth?: number; // Default: 20
-  adaptiveDepthLimit?: boolean; // Auto-adjust based на body size
-}
-```
-
-**Оціночна складність**: 3-4 дні
-**Вплив**: Покращення безпеки
+- Smart limits based on body size
 
 ---
 
-#### 4.3 Prototype pollution protection 🟡 MEDIUM PRIORITY
+#### 4.3 Prototype Pollution Protection ✅ DONE
 
-**Функціональність**:
-- Виявлення ключів `__proto__`, `constructor`, `prototype`
-- Sanitization перед парсингом
+**Features**:
+- Detection of `__proto__`, `constructor`, `prototype` keys
+- Sanitization before parsing
 - Optional strict mode
 
-**Реалізація**: Додати в [`parser.ts`](src/core/parser.ts:74-77) перевірку на prototype pollution
-
-```typescript
-// Псевдокод
-const dangerousKeys = ['__proto__', 'constructor', 'prototype'];
-if (dangerousKeys.includes(key)) {
-  throw new PrototypePollutionError(key, path);
-}
-```
-
-**Оціночна складність**: 3-4 дні
-**Вплив**: Критичне для безпеки
-
 ---
 
-#### 4.4 JSON injection prevention 🟢 LOW PRIORITY
+#### 4.4 JSON Injection Prevention 🟢 LOW PRIORITY
 
-**Функціональність**:
-- Виявлення спроб ін'єкції в string values
-- Pattern matching для common injection vectors
+**Features**:
+- Detection of injection attempts in string values
+- Pattern matching for common injection vectors
 
-**Приклади ін'єкцій**:
+**Example injections**:
 ```json
 {
   "user": {"$gt": ""}
@@ -416,18 +363,18 @@ if (dangerousKeys.includes(key)) {
 }
 ```
 
-**Оціночна складність**: 1-2 тижні
-**Вплив**: Покращення безпеки
+**Estimated complexity**: 1-2 weeks
+**Impact**: Security improvement
 
 ---
 
-### Вектор 5: Моніторинг та продуктивність ⭐
+### Vector 5: Monitoring & Performance ⭐
 
-**Ціль**: Telemetry, metrics та оптимізація
+**Goal**: Telemetry, metrics, and optimization
 
-#### 5.1 Telemetry & metrics 🟡 MEDIUM PRIORITY
+#### 5.1 Telemetry & Metrics 🟡 MEDIUM PRIORITY
 
-**Метрики**:
+**Metrics**:
 ```typescript
 interface StrictJsonMetrics {
   duplicateDetectionCount: number;
@@ -437,532 +384,129 @@ interface StrictJsonMetrics {
 }
 ```
 
-**Інтеграція**: OpenTelemetry, Prometheus, Datadog
+**Integration**: OpenTelemetry, Prometheus, Datadog
 
-**API**:
-```typescript
-interface StrictJsonOptions {
-  enableMetrics?: boolean;
-  metricsProvider?: 'prometheus' | 'opentelemetry' | 'custom';
-}
-```
-
-**Оціночна складність**: 2-3 тижні
-**Вплив**: Critical для продакшену
+**Estimated complexity**: 2-3 weeks
+**Impact**: Critical for production
 
 ---
 
-#### 5.2 Distributed tracing support 🟢 LOW PRIORITY
+#### 5.2 Distributed Tracing Support 🟢 LOW PRIORITY
 
-**Інтеграція**:
+**Integration**:
 - OpenTelemetry support
-- Spans для parsing operations
-- Error context в traces
+- Spans for parsing operations
+- Error context in traces
 
-**Оціночна складність**: 2-3 тижні
-**Вплив**: Покращення observability
+**Estimated complexity**: 2-3 weeks
+**Impact**: Observability improvement
 
 ---
 
-#### 5.3 Caching layer 🟢 LOW PRIORITY
+#### 5.3 Caching Layer ✅ DONE
 
-**Функціональність**:
-- LRU cache для повторних payloads
+**Features**:
+- LRU cache for repeated payloads
 - Hash-based cache keys
 - Configurable TTL
 
-**API**:
-```typescript
-interface StrictJsonOptions {
-  enableCache?: boolean;
-  cacheSize?: number; // Default: 1000
-  cacheTTL?: number;  // ms, Default: 60000
-}
-```
-
-**Оціночна складність**: 1-2 тижні
-**Вплив**: Оптимізація для high-throughput систем
-
 ---
 
-#### 5.4 Performance optimizations 🟢 LOW PRIORITY
+#### 5.4 Performance Optimizations 🟢 LOW PRIORITY
 
-**Оптимізації**:
+**Optimizations**:
 - Benchmark-driven improvements
 - Memory footprint reduction
 - CPU profiling
-- SIMD operations (для WASM)
+- SIMD operations (for WASM)
 
-**Інструменти**:
-- [`scripts/benchmark-parser.mjs`](scripts/benchmark-parser.mjs) розширити
-- Profiling з Chrome DevTools
+**Tools**:
+- [`scripts/benchmark-parser.mjs`](scripts/benchmark-parser.mjs) — extend
+- Profiling with Chrome DevTools
 - Memory leak detection
 
-**Оціночна складність**: 2-3 тижні
-**Вплив**: Загальне покращення продуктивності
+**Estimated complexity**: 2-3 weeks
+**Impact**: General performance improvement
 
 ---
 
-### Вектор 6: Складні інновації 🌟
+### Vector 6: Advanced Innovation 🌟
 
-**Ціль**: Революційні покращення та нові можливості
+**Goal**: Revolutionary improvements and new capabilities
 
-#### 6.1 WASM implementation 🔴 HIGH PRIORITY (долгостроково)
+#### 6.1 WASM Implementation 🔴 HIGH PRIORITY (long-term)
 
-**Функціональність**:
-- Core parser на Rust/Go з WASM
-- 2-5x швидше парсинг
-- Drop-in replacement для JS parser
+**Features**:
+- Core parser in Rust/Go with WASM
+- 2-5x faster parsing
+- Drop-in replacement for JS parser
 
-**Технічний підхід**:
+**Technical approach**:
 ```rust
 // src/wasm/parser.rs (Rust)
 #[wasm_bindgen]
 pub fn parse_strict_json(json: &str) -> Result<JsValue, JsValue> {
-    // Fast parser з WASM
+    // Fast parser with WASM
 }
 ```
 
-**API**:
-```typescript
-interface StrictJsonOptions {
-  useWasm?: boolean; // Default: false
-  wasmUrl?: string;  // URL до WASM bundle
-}
-```
-
-**Критерії успіху**:
-- 2-5x швидше за JS версію
-- Memory footprint зменшено на 50%+
-- Backward compatibility
-
-**Оціночна складність**: 6-8 тижнів
-**Вплив**: Революційне покращення продуктивності
+**Estimated complexity**: 6-8 weeks
+**Impact**: Revolutionary performance improvement
 
 ---
 
-#### 6.2 Schema-first approach 🟡 MEDIUM PRIORITY
+#### 6.2 Schema-First Approach 🟡 MEDIUM PRIORITY
 
-**Функціональність**:
-- Автоматичне генерування DTO з JSON Schema
-- Прискорений парсинг з попередньо скомпільованими схемами
+**Features**:
+- Automatic DTO generation from JSON Schema
+- Accelerated parsing with pre-compiled schemas
 - Type inference
 
-**API**:
-```typescript
-interface StrictJsonOptions {
-  schema?: JSONSchema7;
-  generateDto?: boolean;
-}
-
-StrictJsonModule.forRoot({
-  schema: {
-    type: 'object',
-    properties: {
-      user: { type: 'string' }
-    }
-  },
-  generateDto: true
-})
-// Automatically generates: CreateUserDto interface
-```
-
-**Оціночна складність**: 4-6 тижнів
-**Вплив**: Покращення DX та продуктивності
-
 ---
 
-#### 6.3 Multi-format support 🟢 LOW PRIORITY
+#### 6.3 Multi-Format Support 🟢 LOW PRIORITY
 
-**Формати**:
-- XML support (захист від XXE)
+**Formats**:
+- XML support (XXE protection)
 - GraphQL validation
 - YAML support
 
-**Оціночна складність**: 4-6 тижнів
-**Вплив**: Розширення use cases
+**Estimated complexity**: 4-6 weeks
+**Impact**: Use case expansion
 
 ---
 
-#### 6.4 Advanced developer tools 🟢 LOW PRIORITY
+## Recommendations
 
-**Інструменти**:
-- Playground для тестування (веб-інтерфейс)
-- Postman collection з прикладами
-- Interactive documentation
-- VS Code extension (див. 3.4)
+### Strategic Priorities
 
-**Оціночна складність**: 3-4 тижні
-**Вплив**: Покращення DX
+1. **Stability over new features** — every version must be production-ready
+2. **Performance first** — streaming parser has the highest priority
+3. **Security is critical** — prototype pollution protection and recursion limits
+4. **NestJS ecosystem** — exception filters and integrations are important for growth
 
----
+### Tactical Recommendations
 
-## Детальна роадмапа по версіях
-
-### 📦 v0.3.0 - Productivity & Performance (2-3 місяці)
-
-**Ціль**: Критичні покращення для продакшену
-
-**Статус**: ✅ **Випущено** - Всі high priority завдання реалізовано
-**Дата випуску**: Січень 2025
-**Наступна версія**: v0.4.0 (Ecosystem Expansion)
-
-#### Priority High 🔴
-- ✅ Streaming parser для Express
-- ✅ Custom error handlers
-- ✅ Prototype pollution protection
-- ✅ Recursion depth limits
-
-#### Priority Medium 🟡
-- ✅ Розширені опції конфігурації (whitelist, blacklist, maxDepth)
-- ✅ Додаткові JSON content-type підтримка (planned)
-
-#### Priority Low 🟢
-- ✅ Покращення повідомлень про помилки (JSON Pointer paths)
-- ✅ Rate limiting hooks (planned)
-
-#### Документація
-- Performance benchmarks до/після
-- Migration guide
-- Production best practices
-- Troubleshooting guide
-
-#### Приклади
-- [examples/prototype-pollution.ts](examples/prototype-pollution.ts)
-- [examples/custom-handlers.ts](examples/custom-handlers.ts)
-- [examples/extended-options.ts](examples/extended-options.ts)
-- [examples/streaming-parser.ts](examples/streaming-parser.ts)
+1. **Feature flags for experimental features**
+2. **Minimize breaking changes** — strict semantic versioning
+3. **Benchmark-driven development** — automatic benchmarks in CI/CD
+4. **Community-focused** — document contribution guidelines, welcome contributions
 
 ---
 
-### 📦 v0.4.0 - Ecosystem Expansion (2-3 місяці)
+## Legend
 
-**Ціль**: Розширення підтримуваних фреймворків
-
-#### Priority High 🔴
-- ✅ Hapi adapter
-- ✅ Koa adapter
-- ✅ NestJS exception filters інтеграція
-
-#### Priority Medium 🟡
-- ✅ Node.js native HTTP server
-- ✅ CLI tool для перевірки JSON files
-
-#### Priority Low 🟢
-- ✅ VS Code extension MVP
-
-#### Документація
-- Integration guides для кожного фреймворку
-- Examples repository розширення
-- Community contribution guidelines
-
-#### Приклади
-- [examples/hapi-main.ts](examples/hapi-main.ts)
-- [examples/koa-main.ts](examples/koa-main.ts)
-- [examples/exception-filters.ts](examples/exception-filters.ts)
+- 🔴 **High Priority** — Critical for production / security
+- 🟡 **Medium Priority** — Important for DX / ecosystem
+- 🟢 **Low Priority** — Useful, but not critical
+- ⭐⭐⭐ **Critical vector** — High strategic priority
+- ⭐⭐ **Important vector** — Medium strategic priority
+- ⭐ **Useful vector** — Low strategic priority
+- 🌟 **Innovation vector** — Long-term perspective
+- ✅ **DONE** — Already implemented
 
 ---
 
-### 📦 v0.5.0 - Validation & Security (2-3 місяці)
-
-**Ціль**: Розширення валідації та безпеки
-
-#### Priority High 🔴
-- ✅ JSON Schema інтеграція (Draft 7)
-- ✅ Rate limiting hooks (розширено)
-- ✅ JSON injection prevention
-
-#### Priority Medium 🟡
-- ✅ Basic telemetry (counter metrics)
-- ✅ Distributed tracing support (OpenTelemetry)
-
-#### Priority Low 🟢
-- ✅ Caching layer (LRU cache)
-
-#### Документація
-- Security best practices guide
-- JSON Schema examples
-- Monitoring guide
-- Security audit report
-
-#### Приклади
-- [examples/json-schema.ts](examples/json-schema.ts)
-- [examples/telemetry.ts](examples/telemetry.ts)
-- [examples/caching.ts](examples/caching.ts)
-
----
-
-### 📦 v1.0.0 - Production Ready (3-4 місяці)
-
-**Ціль**: Стабільна, повнофункціональна версія для продакшену
-
-#### Всі features з v0.3.0 - v0.5.0 +
-
-#### Priority High 🔴
-- ✅ Caching layer з LRU cache (розширено)
-- ✅ Performance optimizations (benchmark-driven)
-- ✅ Комплексні тести (покриття >95%)
-
-#### Priority Medium 🟡
-- ✅ VS Code extension (повна версія)
-- ✅ Interactive documentation
-
-#### Priority Low 🟢
-- ✅ Advanced developer tools (Playground, Postman collection)
-
-#### Документація
-- Comprehensive API reference
-- Video tutorials
-- Production deployment guide
-- SLA guarantee
-- Enterprise support guide
-
-#### Приклади
-- [examples/playground/index.html](examples/playground/index.html)
-- [examples/postman-collection.json](examples/postman-collection.json)
-
----
-
-### 📦 v2.0.0 - Performance Revolution (6-8 місяців)
-
-**Ціль**: Революційне покращення продуктивності
-
-#### Priority High 🔴
-- ✅ WASM implementation (Rust parser)
-- ✅ Schema-first approach
-- ✅ Auto-generated DTOs from JSON Schema
-
-#### Priority Medium 🟡
-- ✅ Multi-format support (XML, GraphQL)
-- ✅ Advanced developer tools (Playground, Postman collection)
-- ✅ SIMD operations (для WASM)
-
-#### Priority Low 🟢
-- ✅ Enterprise features (RBAC, multi-tenancy)
-
-#### Документація
-- Performance comparison (JS vs WASM)
-- Migration guide v1.x → v2.0
-- Advanced architecture patterns
-- Enterprise deployment guide
-
-#### Приклади
-- [examples/wasm-parser.ts](examples/wasm-parser.ts)
-- [examples/schema-first.ts](examples/schema-first.ts)
-- [examples/multi-format.ts](examples/multi-format.ts)
-
----
-
-## Пріоритезація для найближчого майбутнього
-
-### 🔥 IMMEDIATE (1-2 місяці) - Критичне для продакшену
-
-1. **Streaming parser для Express** 🔴
-   - Чому: Критичне для великих payloads (>1MB)
-   - Вплив: Memory footprint зменшено на 80%+
-   - Складність: 3-4 тижні
-
-2. **Prototype pollution protection** 🔴
-   - Чому: Критичне для безпеки
-   - Вплив: Захист від CVE
-   - Складність: 3-4 дні
-
-3. **Custom error handlers** 🟡
-   - Чому: Покращення DX
-   - Вплив: Гнучкість інтеграції
-   - Складність: 1 тиждень
-
-4. **Розширені опції (whitelist, blacklist, maxDepth)** 🟡
-   - Чому: Гнучкість конфігурації
-   - Вплив: Більше use cases
-   - Складність: 1-2 тижні
-
----
-
-### ⚡ SHORT-TERM (3-4 місяці) - Розширення екосистеми
-
-5. **NestJS exception filters** 🟡
-   - Чому: Інтеграція з NestJS екосистемою
-   - Вплив: Критичне для NestJS розробників
-   - Складність: 1-2 тижні
-
-6. **Hapi adapter** 🟡
-   - Чому: Розширення аудиторії
-   - Вплив: +X% potential users
-   - Складність: 1-2 тижні
-
-7. **CLI tool** 🟡
-   - Чому: Інструменти для розробників
-   - Вплив: Покращення DX
-   - Складність: 1 тиждень
-
-8. **Basic telemetry** 🟡
-   - Чому: Моніторинг в продакшені
-   - Вплив: Observability
-   - Складність: 2-3 тижні
-
----
-
-### 🚀 MEDIUM-TERM (6-12 місяців) - Валідація та оптимізація
-
-9. **JSON Schema інтеграція** 🟡
-   - Чому: Розширення валідації
-   - Вплив: Більше функціональності
-   - Складність: 3-4 тижні
-
-10. **Rate limiting hooks** 🟡
-    - Чому: Покращення безпеки
-    - Вплив: Захист від DoS
-    - Складність: 3-4 дні
-
-11. **Caching layer** 🟡
-    - Чому: Оптимізація продуктивності
-    - Вплив: Зменшення навантаження
-    - Складність: 1-2 тижні
-
-12. **VS Code extension** 🟢
-    - Чому: Покращення DX
-    - Вплив: Міліони потенційних користувачів
-    - Складність: 2-3 тижні
-
----
-
-### 🌟 LONG-TERM (12+ місяців) - Інновації
-
-13. **WASM implementation** 🔴
-    - Чому: Революційне покращення продуктивності
-    - Вплив: 2-5x швидше парсинг
-    - Складність: 6-8 тижнів
-
-14. **Schema-first approach** 🟡
-    - Чому: Новий парадигм
-    - Вплив: Значне покращення DX
-    - Складність: 4-6 тижнів
-
-15. **Multi-format support** 🟡
-    - Чому: Розширення use cases
-    - Вплив: XML, GraphQL, YAML
-    - Складність: 4-6 тижнів
-
----
-
-## Рекомендації
-
-### Стратегічні пріоритети
-
-1. **Стабільність над новими features**
-   - Кожна версія має бути production-ready
-   - Comprehensive testing перед release
-   - Backward compatibility
-
-2. **Performance перш за все**
-   - Streaming parser має найвищий пріоритет
-   - WASM implementation - довгострокова мета
-   - Benchmark-driven development
-
-3. **Безпека критична**
-   - Prototype pollution protection в v0.3.0
-   - Recursion depth limits
-   - JSON injection prevention
-
-4. **Екосистема NestJS**
-   - Exception filters та інтеграції важливі для росту
-   - NestJS розробники - основна аудиторія
-   - Community-driven development
-
----
-
-### Тактичні рекомендації
-
-1. **Feature flags для експериментальних features**
-   ```typescript
-   interface StrictJsonOptions {
-     experimental?: {
-       wasm?: boolean;
-       schemaFirst?: boolean;
-     };
-   }
-   ```
-
-2. **Мінімізувати breaking changes**
-   - Semantic versioning строго дотримуватися
-   - Deprecation warnings за 2 minor версії
-   - Migration guide для кожної major версії
-
-3. **Benchmark-driven development**
-   - Автоматичні бенчмарки в CI/CD
-   - Regression detection
-   - Performance budgets
-
-4. **Community-focused**
-   - Документувати contribution guidelines
-   - Welcome contributions
-   - Code review process
-
----
-
-### Ресурси
-
-#### Команда
-- **1-2 розробники** для core functionality
-- **1 розробник** для інтеграцій та екосистеми
-- **1 QA інженер** для тестування
-
-#### Time
-- **6-8 місяців** для v1.0.0
-- **12-14 місяців** для v2.0.0
-- **2-3 місяці** між minor версіями
-
-#### Бюджет
-- **Мінімальний** - це open-source проєкт
-- **Може потребувати фінансування** для WASM розробки
-- **Grant opportunities**: GitHub Sponsors, Open Collective, Google Open Source
-
----
-
-## Критерії успіху
-
-### Кількісні метрики
-- **NPM downloads**: 10K+/місяць до v1.0.0
-- **GitHub stars**: 500+ до v1.0.0
-- **Test coverage**: >95% для core functionality
-- **Performance**: 2x швидше за вбудований парсер до v2.0.0
-
-### Якісні метрики
-- **Production-ready**: Використується в real-world projects
-- **Community**: Активні contributions та discussions
-- **Documentation**: Comprehensive guides та examples
-- **Stability**: Zero critical bugs в production
-
----
-
-## Висновок
-
-Ця роадмапа побудована на принципі **поступового складання функціональності** від критичних покращень продуктивності та безпеки до складних інновацій. Кожен вектор логічно пов'язаний з основною проблематикою проєкту - безпекою JSON парсингу в NestJS екосистемі.
-
-Ключові принципи:
-1. **Performance first** - streaming parser та WASM мають найвищий пріоритет
-2. **Security critical** - prototype pollution protection та recursion limits
-3. **Ecosystem focused** - NestJS exception filters та інтеграції
-4. **Community driven** - відкрита розробка та contributions
-
-Проєкт має потенціал стати стандартом для безпеки JSON в Node.js екосистемі. Чітка роадмапа допоможе досягти цієї мети протягом 12-18 місяців.
-
----
-
-## Легенда
-
-- 🔴 **High Priority** - Критичне для продакшену / безпеки
-- 🟡 **Medium Priority** - Важливе для DX / екосистеми
-- 🟢 **Low Priority** - Корисне, але не критичне
-- ⭐⭐⭐ **Критичний вектор** - Високий пріоритет стратегічно
-- ⭐⭐ **Важливий вектор** - Середній пріоритет стратегічно
-- ⭐ **Корисний вектор** - Низький пріоритет стратегічно
-- 🌟 **Інноваційний вектор** - Довгострокові перспективи
-
----
-
-**Версія документу**: 1.0.0  
-**Останнє оновлення**: 2025  
-**Автор**: Kilo Code Orchestrator  
-**Статус**: Затверджено
+**Document version**: 2.0.0
+**Last updated**: May 2026
+**Status**: Approved

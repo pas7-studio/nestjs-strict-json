@@ -207,7 +207,17 @@ Express middleware returns JSON responses with these HTTP status codes:
 
 ### Content-Type Handling
 
-The middleware only processes requests with `Content-Type` starting with `application/json`. All other requests pass through to the next middleware.
+The middleware processes requests with JSON content-types:
+
+| Content-Type | Supported |
+|---|---|
+| `application/json` | Yes |
+| `application/json-patch+json` (RFC 6902) | Yes |
+| `application/vnd.api+json` (JSON API) | Yes |
+| `application/merge-patch+json` (RFC 7396) | Yes |
+| `application/problem+json` (RFC 7807) | Yes |
+
+All other requests pass through to the next middleware.
 
 ---
 

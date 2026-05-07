@@ -5,6 +5,51 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-05-07
+
+### Breaking Changes
+
+- `StrictJsonModule.forRootAsync()` now requires `StrictJsonAsyncOptions` with `useFactory` instead of accepting `StrictJsonOptions` directly. This aligns the API with the documented behavior and NestJS async module conventions.
+
+```ts
+// Before (broken)
+StrictJsonModule.forRootAsync({ maxDepth: 20 });
+
+// After (correct)
+StrictJsonModule.forRootAsync({
+  useFactory: () => ({ maxDepth: 20 }),
+});
+```
+
+### Fixed
+
+- `ignoreCase` option now correctly passed to key validation in `parser-core.ts`
+- Sync streaming path no longer bypasses duplicate key, prototype pollution, and depth validation
+
+### Added
+
+- JSON variant content-type support: `application/json-patch+json`, `application/vnd.api+json`, `application/merge-patch+json`, `application/problem+json` (Express and Fastify)
+- `TypedErrorHandlerOptions` type with per-error-type generic support
+- `StrictJsonAsyncOptions` interface for type-safe async module configuration
+- `engines` field in `package.json` (Node.js >=20.0.0)
+- CI matrix testing on Node.js 20, 22, and 24
+
+### Changed
+
+- CI workflow: `actions/setup-node@v6`, `corepack` for pnpm, Node.js matrix
+- Release workflow switched to npm Trusted Publishing (OIDC)
+- ROADMAP.md translated to English
+
+[1.1.0]: https://github.com/pas7-studio/nestjs-strict-json/releases/tag/v1.1.0
+
+## [1.0.2] - 2026-05-07
+
+### Changed
+
+- CI: switched to npm Trusted Publishing (OIDC) for secure tokenless publishing
+
+[1.0.2]: https://github.com/pas7-studio/nestjs-strict-json/releases/tag/v1.0.2
+
 ## [1.0.1] - 2026-05-04
 
 ### Fixed

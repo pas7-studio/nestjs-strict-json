@@ -7,7 +7,7 @@ import {
   Optional,
   ValueProvider,
 } from "@nestjs/common";
-import type { INestApplication } from "@nestjs/common";
+import type { INestApplication, InjectionToken, OptionalFactoryDependency } from "@nestjs/common";
 import type { StrictJsonOptions } from "../core/types.js";
 import type { ICache } from "../core/cache/index.js";
 import { createCache } from "../core/cache/index.js";
@@ -46,6 +46,12 @@ function createCacheProvider(options?: StrictJsonOptions): ValueProvider<ICache>
     provide: STRICT_JSON_CACHE,
     useValue: createCache(options),
   };
+}
+
+export interface StrictJsonAsyncOptions {
+  imports?: DynamicModule['imports'];
+  useFactory: (...args: unknown[]) => Promise<StrictJsonOptions> | StrictJsonOptions;
+  inject?: (InjectionToken | OptionalFactoryDependency)[];
 }
 
 /**
@@ -227,19 +233,20 @@ export class StrictJsonModule implements OnApplicationBootstrap, OnModuleDestroy
    * export class AppModule {}
    * ```
    */
-  public static forRootAsync(options?: StrictJsonOptions): DynamicModule {
+  public static forRootAsync(asyncOptions: StrictJsonAsyncOptions): DynamicModule {
     return {
       module: StrictJsonModule,
-      imports: [],
+      imports: asyncOptions.imports ?? [],
       providers: [
         {
-          provide: STRICT_JSON_CACHE,
-          useFactory: (opts?: StrictJsonOptions) => createCache(opts),
-          inject: [STRICT_JSON_OPTIONS],
+          provide: STRICT_JSON_OPTIONS,
+          useFactory: asyncOptions.useFactory,
+          inject: asyncOptions.inject ?? [],
         },
         {
-          provide: STRICT_JSON_OPTIONS,
-          useValue: options,
+          provide: STRICT_JSON_CACHE,
+          useFactory: (options?: StrictJsonOptions) => createCache(options),
+          inject: [STRICT_JSON_OPTIONS],
         },
         StrictJsonCacheService,
       ],

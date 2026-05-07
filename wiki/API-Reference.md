@@ -377,7 +377,13 @@ NestJS module that provides DI for cache and options.
 ```ts
 class StrictJsonModule {
   static forRoot(options?: StrictJsonOptions): DynamicModule;
-  static forRootAsync(options?: StrictJsonOptions): DynamicModule;
+  static forRootAsync(asyncOptions: StrictJsonAsyncOptions): DynamicModule;
+}
+
+interface StrictJsonAsyncOptions {
+  imports?: DynamicModule['imports'];
+  useFactory: (...args: unknown[]) => Promise<StrictJsonOptions> | StrictJsonOptions;
+  inject?: (InjectionToken | OptionalFactoryDependency)[];
 }
 ```
 
@@ -414,7 +420,7 @@ function createStrictJsonExpressMiddleware(
 ```
 
 **Behavior:**
-- Only processes requests with `Content-Type: application/json`
+- Processes requests with JSON content-types: `application/json`, `application/json-patch+json`, `application/vnd.api+json`, `application/merge-patch+json`, `application/problem+json`
 - Supports streaming for large payloads
 - Returns JSON error responses with appropriate HTTP status codes
 - Sets `req.body` with the parsed result
@@ -447,7 +453,7 @@ function registerStrictJsonFastify(
 ```
 
 **Behavior:**
-- Replaces the default `application/json` parser
+- Registers content type parsers for: `application/json`, `application/json-patch+json`, `application/vnd.api+json`, `application/merge-patch+json`, `application/problem+json`
 - Throws `BadRequestException` or `PayloadTooLargeException` from `@nestjs/common`
 - Uses Fastify's `addContentTypeParser` API with `parseAs: "buffer"`
 
@@ -540,5 +546,30 @@ type StrictJsonErrorDetails = {
 ### `StrictJsonErrorHandler`
 
 ```ts
-type StrictJsonErrorHandler = (error: unknown) => void | Promise<void>;
+type StrictJsonErrorHandler<TError = unknown> = (error: TError) => void | Promise<void>;
+```
+
+### `TypedErrorHandlerOptions` (v1.1.0+)
+
+Typed error handler options with per-error-type generics.
+
+```ts
+type TypedErrorHandlerOptions = {
+  onDuplicateKey?: StrictJsonErrorHandler<DuplicateKeyError>;
+  onInvalidJson?: StrictJsonErrorHandler<InvalidJsonError>;
+  onBodyTooLarge?: StrictJsonErrorHandler<BodyTooLargeError>;
+  onPrototypePollution?: StrictJsonErrorHandler<PrototypePollutionError>;
+  onDepthLimit?: StrictJsonErrorHandler<DepthLimitError>;
+  onError?: StrictJsonErrorHandler<StrictJsonError>;
+};
+```
+
+### `StrictJsonAsyncOptions` (v1.1.0+)
+
+```ts
+interface StrictJsonAsyncOptions {
+  imports?: DynamicModule['imports'];
+  useFactory: (...args: unknown[]) => Promise<StrictJsonOptions> | StrictJsonOptions;
+  inject?: (InjectionToken | OptionalFactoryDependency)[];
+}
 ```

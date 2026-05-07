@@ -4,10 +4,27 @@ import type { StreamingOptions } from './options/streaming-options';
 import type { LazyOptions } from './options/lazy-options';
 import type { FilteringOptions } from './options/filtering-options';
 import type { ErrorHandlerOptions } from './options/error-handlers';
+import type {
+  StrictJsonError,
+  DuplicateKeyError,
+  InvalidJsonError,
+  BodyTooLargeError,
+  PrototypePollutionError,
+  DepthLimitError,
+} from './errors.js';
 
-export type StrictJsonErrorHandler = (
-  error: unknown
+export type StrictJsonErrorHandler<TError = unknown> = (
+  error: TError
 ) => void | Promise<void>;
+
+export type TypedErrorHandlerOptions = {
+  onDuplicateKey?: StrictJsonErrorHandler<DuplicateKeyError>;
+  onInvalidJson?: StrictJsonErrorHandler<InvalidJsonError>;
+  onBodyTooLarge?: StrictJsonErrorHandler<BodyTooLargeError>;
+  onPrototypePollution?: StrictJsonErrorHandler<PrototypePollutionError>;
+  onDepthLimit?: StrictJsonErrorHandler<DepthLimitError>;
+  onError?: StrictJsonErrorHandler<StrictJsonError>;
+};
 
 /**
  * Configuration options for StrictJson parsing.

@@ -20,7 +20,7 @@ Controls core parsing behavior including security measures and optimization stra
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `maxDepth` | `number` | `10` | Maximum nesting depth. Deeper structures trigger `STRICT_JSON_DEPTH_LIMIT`. |
+| `maxDepth` | `number` | `20` | Maximum nesting depth. Deeper structures trigger `STRICT_JSON_DEPTH_LIMIT`. |
 | `enablePrototypePollutionProtection` | `boolean` | `true` | Blocks `__proto__`, `constructor`, `prototype` keys from modifying Object prototype. |
 | `enableFastPath` | `boolean` | `false` | Skips duplicate key validation for simple JSON. Only checks prototype pollution. Use for trusted, simple payloads only. |
 

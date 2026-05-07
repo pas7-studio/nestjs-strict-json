@@ -23,6 +23,20 @@ If you need secure JSON parsing in Node.js APIs, this package is built for that 
 [![Tests](https://img.shields.io/badge/tests-551%20passing-brightgreen.svg)](https://github.com/pas7-studio/nestjs-strict-json/actions/workflows/test.yml)
 [![Performance](https://img.shields.io/badge/performance-12.8x%20faster-blue.svg)](performance/reports/comparison-latest.md)
 
+## v1.1.0 - Features & Fixes
+
+### Breaking
+- `forRootAsync()` now requires `StrictJsonAsyncOptions` with `useFactory`/`inject`/`imports`
+
+### Bug Fixes
+- `ignoreCase` option now works in key validation
+- Sync streaming path no longer skips security validation (duplicate keys, prototype pollution, depth)
+
+### New Features
+- JSON variant content-types: `application/json-patch+json`, `application/vnd.api+json`, `application/merge-patch+json`, `application/problem+json`
+- `TypedErrorHandlerOptions` — typed generic error handlers
+- CI matrix: Node.js 20, 22, 24
+
 ## v1.0.0 - Stable Release
 
 ### Security
@@ -205,6 +219,7 @@ server.listen({ port: 3000 });
 
 - `registerStrictJson(app, options?)`
 - `StrictJsonModule.forRoot(options?)`
+- `StrictJsonModule.forRootAsync(asyncOptions?)`
 
 ### Adapter integration
 

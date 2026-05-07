@@ -77,9 +77,7 @@ class JsonParser {
     }
 
     if (useStreaming) {
-      const parsed = JSON.parse(jsonStr);
-      this.cacheResult(cacheKey, parsed);
-      return parsed;
+      return this.fullParse(jsonStr, cacheKey, (h, e) => this.invokeHandlerSync(h, e));
     }
 
     return this.fullParse(jsonStr, cacheKey, (h, e) => this.invokeHandlerSync(h, e));

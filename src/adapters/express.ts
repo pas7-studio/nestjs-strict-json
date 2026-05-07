@@ -33,8 +33,20 @@ const sendJson = (res: ServerResponse, statusCode: number, payload: unknown): vo
   res.end(JSON.stringify(payload));
 };
 
-const resolveErrorCode = (e: Error): string | null => {
-  if (e.message.includes("Duplicate key")) return "STRICT_JSON_DUPLICATE_KEY";
+const JSON_CONTENT_TYPES = new Set([
+  'application/json',
+  'application/json-patch+json',
+  'application/vnd.api+json',
+  'application/merge-patch+json',
+  'application/problem+json',
+]);
+
+const isJsonContentType = (contentType: string): boolean => {
+  const base = contentType.split(';')[0].trim().toLowerCase();
+  return JSON_CONTENT_TYPES.has(base);
+};
+
+const resolveErrorCode = (e: Error): string | null => {  if (e.message.includes("Duplicate key")) return "STRICT_JSON_DUPLICATE_KEY";
   if (e.message.includes("Prototype pollution")) return "STRICT_JSON_PROTOTYPE_POLLUTION";
   if (e.message.includes("Depth limit")) return "STRICT_JSON_DEPTH_LIMIT";
   if (e.message.includes("is not allowed")) return "STRICT_JSON_KEY_NOT_ALLOWED";
@@ -49,7 +61,7 @@ export const createStrictJsonExpressMiddleware =
     next: ExpressNext,
   ): Promise<void> => {
     const contentType = req.headers["content-type"] ?? "";
-    if (!String(contentType).startsWith("application/json")) {
+    if (!isJsonContentType(contentType)) {
       next();
       return;
     }
