@@ -27,7 +27,7 @@ jobs:
           NODE_AUTH_TOKEN: ''
 
       - name: Setup pnpm
-        run: corepack enable && corepack prepare pnpm@latest --activate
+        run: corepack enable && corepack prepare pnpm@9 --activate
 
       - name: Install dependencies
         run: pnpm install
