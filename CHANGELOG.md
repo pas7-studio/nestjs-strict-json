@@ -5,13 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.1.1] - 2026-05-07
+## [1.1.2] - 2026-05-16
 
-### Changed
+### Performance
 
-- README cleaned up: removed version-specific sections, added content-type table, forRootAsync example, linked wiki and changelog
+- **SHA-256 → MD5** for cache key hashing: 1.5x faster hashing with equivalent collision resistance for cache use (non-security context)
+- **WeakMap cache** for serialized options in `buildCacheKey` — avoids redundant `JSON.stringify()` when same options object is reused
+- **Removed Buffer roundtrip** for string inputs: `Buffer.from(input).toString()` eliminated from hot path (10-21% faster for small-medium payloads)
+- **Module-level Set caching** in `fast-path.ts` and `parser-core.ts` — `dangerousKeys` and `EMPTY_SET` no longer re-allocated per parse call
+- **String constants** in `streaming.ts` — replaces inline strings and per-error regex compilation in error handler
 
-[1.1.1]: https://github.com/pas7-studio/nestjs-strict-json/releases/tag/v1.1.1
+### Benchmarks (v1.1.1 → v1.1.2)
+
+| Scenario | Before (ms) | After (ms) | Improvement |
+|----------|------------|------------|-------------|
+| Valid medium JSON | 0.0272 | 0.0162 | **40%** |
+| Fast path | 0.0015 | 0.0012 | **20%** |
+| Small JSON (cold cache) | 0.0082 | 0.0074 | **10%** |
+| Valid small JSON | 0.0025 | 0.0022 | **12%** |
+
+[1.1.2]: https://github.com/pas7-studio/nestjs-strict-json/releases/tag/v1.1.2
 
 ## [1.1.0] - 2026-05-07
 

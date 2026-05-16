@@ -27,11 +27,12 @@ class JsonParser {
 
   parse(input: string | Buffer, isAsync: boolean = false): unknown {
     const maxBodySizeBytes = this.options?.maxBodySizeBytes;
-    const buf = typeof input === "string" ? Buffer.from(input, "utf8") : input;
+    const isStringInput = typeof input === "string";
+    const byteLength = isStringInput ? Buffer.byteLength(input, "utf8") : input.byteLength;
 
     if (
       typeof maxBodySizeBytes === "number" &&
-      buf.byteLength > maxBodySizeBytes
+      byteLength > maxBodySizeBytes
     ) {
       const error = new BodyTooLargeError(maxBodySizeBytes);
       if (isAsync) {
@@ -46,7 +47,7 @@ class JsonParser {
       throw error;
     }
 
-    const jsonStr = buf.toString("utf-8");
+    const jsonStr = isStringInput ? input : input.toString("utf-8");
     const cachingEnabled = this.options?.enableCache !== false;
     const cacheKey = cachingEnabled ? buildCacheKey(jsonStr, this.options) : null;
 
@@ -58,15 +59,17 @@ class JsonParser {
     }
 
     if (isAsync) {
-      return this.parseAsync(buf, jsonStr, cacheKey);
+      return this.parseAsync(input, jsonStr, isStringInput, cacheKey);
     }
-    return this.parseSync(buf, jsonStr, cacheKey);
+    return this.parseSync(input, jsonStr, isStringInput, cacheKey);
   }
 
-  private parseSync(buf: Buffer, jsonStr: string, cacheKey: string | null): unknown {
-    const useStreaming = shouldUseStreamingForPayload(buf, this.options);
+  private parseSync(input: string | Buffer, jsonStr: string, isStringInput: boolean, cacheKey: string | null): unknown {
+    if (shouldUseStreamingForPayload(input, isStringInput, this.options)) {
+      return this.fullParse(jsonStr, cacheKey, (h, e) => this.invokeHandlerSync(h, e));
+    }
 
-    if (this.options?.enableFastPath === true && !useStreaming) {
+    if (this.options?.enableFastPath === true) {
       try {
         const result = parseWithFastPath(jsonStr, this.options);
         this.cacheResult(cacheKey, result);
@@ -74,19 +77,20 @@ class JsonParser {
       } catch {
         // Fall through to full parser
       }
-    }
-
-    if (useStreaming) {
-      return this.fullParse(jsonStr, cacheKey, (h, e) => this.invokeHandlerSync(h, e));
     }
 
     return this.fullParse(jsonStr, cacheKey, (h, e) => this.invokeHandlerSync(h, e));
   }
 
-  private async parseAsync(buf: Buffer, jsonStr: string, cacheKey: string | null): Promise<unknown> {
-    const useStreaming = shouldUseStreamingForPayload(buf, this.options);
+  private async parseAsync(input: string | Buffer, jsonStr: string, isStringInput: boolean, cacheKey: string | null): Promise<unknown> {
+    if (shouldUseStreamingForPayload(input, isStringInput, this.options)) {
+      const buf = isStringInput ? Buffer.from(input as string, "utf8") : input as Buffer;
+      const result = await parseLargePayload(buf, this.options);
+      this.cacheResult(cacheKey, result);
+      return result;
+    }
 
-    if (this.options?.enableFastPath === true && !useStreaming) {
+    if (this.options?.enableFastPath === true) {
       try {
         const result = parseWithFastPath(jsonStr, this.options);
         this.cacheResult(cacheKey, result);
@@ -94,12 +98,6 @@ class JsonParser {
       } catch {
         // Fall through to full parser
       }
-    }
-
-    if (useStreaming) {
-      const result = await parseLargePayload(buf, this.options);
-      this.cacheResult(cacheKey, result);
-      return result;
     }
 
     return this.fullParse(jsonStr, cacheKey, async (h, e) => { await this.invokeHandlerAsync(h, e); });

@@ -10,6 +10,9 @@ import { isKeyAllowed } from "../validation/index.js";
 type Duplicate = { key: string; path: string } | null;
 type DangerousKey = { key: string; path: string } | null;
 
+const DEFAULT_DANGEROUS_KEYS_SET = new Set(['__proto__', 'constructor', 'prototype']);
+const EMPTY_SET = new Set<string>();
+
 // Optimized iterative version of findDuplicateInNode with lazy mode support
 interface StackFrame {
   node: Node;
@@ -82,8 +85,8 @@ function extractTraversalConfig(options?: StrictJsonOptions): TraversalConfig {
   const shouldCheckPrototype = enablePrototypeProtection && !(lazyMode && lazyModeSkipPrototype);
 
   const dangerousKeysSet = shouldCheckPrototype
-    ? new Set(options?.dangerousKeys || ['__proto__', 'constructor', 'prototype'])
-    : new Set<string>();
+    ? options?.dangerousKeys ? new Set(options.dangerousKeys) : DEFAULT_DANGEROUS_KEYS_SET
+    : EMPTY_SET;
 
   const hasWhitelistOrBlacklist = options?.whitelist !== undefined || options?.blacklist !== undefined;
   const shouldCheckWhitelist = hasWhitelistOrBlacklist && !(lazyMode && lazyModeSkipWhitelist);

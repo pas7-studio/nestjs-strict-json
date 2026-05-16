@@ -167,42 +167,42 @@ export function resetCacheManager(): void {
  * // key1 !== key3 (different options produce different hash)
  * ```
  */
+const OPTIONS_CACHE = new WeakMap<StrictJsonOptions, string>();
+
 export function buildCacheKey(jsonStr: string, options?: StrictJsonOptions): string {
   if (!options) {
-    // When no options, hash only the JSON string
-    return createHash('sha256').update(jsonStr).digest('hex');
+    return createHash('md5').update(jsonStr).digest('hex');
   }
 
-  // Normalize and include all options that affect parsing behavior
-  // This ensures different option configurations produce different cache entries
-  const normalizedOptions = {
-    maxDepth: options.maxDepth,
-    enablePrototypePollutionProtection: options.enablePrototypePollutionProtection,
-    dangerousKeys: options.dangerousKeys,
-    whitelist: options.whitelist,
-    blacklist: options.blacklist,
-    ignoreCase: options.ignoreCase,
-    enableStreaming: options.enableStreaming,
-    streamingThreshold: options.streamingThreshold,
-    chunkSize: options.chunkSize,
-    lazyMode: options.lazyMode,
-    lazyModeThreshold: options.lazyModeThreshold,
-    lazyModeDepthLimit: options.lazyModeDepthLimit,
-    lazyModeSkipPrototype: options.lazyModeSkipPrototype,
-    lazyModeSkipWhitelist: options.lazyModeSkipWhitelist,
-    lazyModeSkipBlacklist: options.lazyModeSkipBlacklist,
-    enableFastPath: options.enableFastPath,
-    maxBodySizeBytes: options.maxBodySizeBytes,
-    enableCache: options.enableCache,
-    cacheSize: options.cacheSize,
-    cacheTTL: options.cacheTTL,
-  };
+  let optionsStr = OPTIONS_CACHE.get(options);
+  if (!optionsStr) {
+    const normalizedOptions = {
+      md: options.maxDepth,
+      epp: options.enablePrototypePollutionProtection,
+      dk: options.dangerousKeys,
+      wl: options.whitelist,
+      bl: options.blacklist,
+      ic: options.ignoreCase,
+      es: options.enableStreaming,
+      st: options.streamingThreshold,
+      cs: options.chunkSize,
+      lm: options.lazyMode,
+      lmt: options.lazyModeThreshold,
+      lmdl: options.lazyModeDepthLimit,
+      lmsp: options.lazyModeSkipPrototype,
+      lmsw: options.lazyModeSkipWhitelist,
+      lmsb: options.lazyModeSkipBlacklist,
+      efp: options.enableFastPath,
+      mbsb: options.maxBodySizeBytes,
+      ec: options.enableCache,
+      csz: options.cacheSize,
+      cttl: options.cacheTTL,
+    };
+    optionsStr = JSON.stringify(normalizedOptions);
+    OPTIONS_CACHE.set(options, optionsStr);
+  }
 
-  const optionsStr = JSON.stringify(normalizedOptions);
-  
-  // Create SHA-256 hash of the combined JSON string and options
-  // This ensures the key is deterministic and collision-resistant
-  const hash = createHash('sha256')
+  const hash = createHash('md5')
     .update(jsonStr)
     .update(optionsStr)
     .digest('hex');

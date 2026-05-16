@@ -3,16 +3,22 @@ import { StreamingJsonParser } from "../streaming-parser.js";
 import { DuplicateKeyError, InvalidJsonError } from "../errors.js";
 import { invokeErrorHandlerSync } from "./error-handler.js";
 
+const DUPLICATE_KEY_MSG = "Duplicate key '";
+const INCOMPLETE_JSON_MSG = 'Incomplete JSON';
+const PP_MSG = 'Prototype pollution detected';
+
 /**
  * Determines whether streaming should be used for parsing a payload.
  * Streaming is automatically enabled for large payloads when enableStreaming is not false.
  *
- * @param buffer - The buffer containing the JSON data
+ * @param input - The input data (string or Buffer)
+ * @param isStringInput - Whether the input is a string
  * @param options - Strict JSON parsing options
  * @returns true if streaming should be used, false otherwise
  */
 export function shouldUseStreamingForPayload(
-  buffer: Buffer,
+  input: string | Buffer,
+  isStringInput: boolean,
   options?: StrictJsonOptions
 ): boolean {
   if (options?.enableStreaming === false) {
@@ -21,8 +27,8 @@ export function shouldUseStreamingForPayload(
 
   const threshold = options?.streamingThreshold ?? 100 * 1024; // 100KB default
   
-  // Auto-enable streaming for large payloads
-  if (buffer.length >= threshold) {
+  const byteLength = isStringInput ? Buffer.byteLength(input as string, "utf8") : (input as Buffer).byteLength;
+  if (byteLength >= threshold) {
     return true;
   }
 
@@ -58,20 +64,18 @@ export async function parseLargePayload(buffer: Buffer, options?: StrictJsonOpti
       let strictError: Error = error;
       
       // Check for duplicate key error from streaming parser
-      const duplicateKeyRegex = /Duplicate key '([^']+)' at (.+)/;
-      if (error.message.includes("Duplicate key '")) {
-        const match = duplicateKeyRegex.exec(error.message);
-        if (match) {
-          const key = match[1];
-          const path = match[2];
+      if (error.message.startsWith(DUPLICATE_KEY_MSG)) {
+        const keyEnd = error.message.indexOf("' at ", 15);
+        if (keyEnd > 15) {
+          const key = error.message.slice(15, keyEnd);
+          const path = error.message.slice(keyEnd + 5);
           strictError = new DuplicateKeyError(path, key);
-          // Invoke custom error handler if provided
           invokeErrorHandlerSync(options?.onDuplicateKey, strictError);
         }
-      } else if (error.message.includes('Incomplete JSON')) {
+      } else if (error.message.startsWith(INCOMPLETE_JSON_MSG)) {
         strictError = new InvalidJsonError(error.message);
         invokeErrorHandlerSync(options?.onInvalidJson, strictError);
-      } else if (error.message.includes('Prototype pollution detected')) {
+      } else if (error.message.startsWith(PP_MSG)) {
         invokeErrorHandlerSync(options?.onPrototypePollution, strictError);
       }
       
