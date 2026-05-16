@@ -21,7 +21,7 @@ If you need secure JSON parsing in Node.js APIs, this package is built for that 
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=pas7-studio_nestjs-strict-json&metric=coverage&style=flat-square)](https://sonarcloud.io/summary/new_code?id=pas7-studio_nestjs-strict-json)
 [![License](https://img.shields.io/github/license/pas7-studio/nestjs-strict-json?style=flat-square)](https://github.com/pas7-studio/nestjs-strict-json/blob/main/LICENSE)
 [![Tests](https://img.shields.io/badge/tests-551%20passing-brightgreen.svg)](https://github.com/pas7-studio/nestjs-strict-json/actions/workflows/ci.yml)
-[![Performance](https://img.shields.io/badge/performance-12.8x%20faster-blue.svg)](performance/reports/comparison-latest.md)
+[![Performance](https://img.shields.io/badge/performance-3.1x%20vs%20jsonc--parser-blue.svg)](performance/reports/comparison-latest.md)
 
 ## Why teams use this
 
@@ -267,11 +267,15 @@ registerStrictJson(app, {
 
 ## Performance
 
-| Implementation | Avg ms/op (1MB) | Relative Speed |
-|---|---|---|
-| Native JSON.parse | 5.36 | 1.0x (baseline) |
-| **@pas7/nestjs-strict-json** | **6.30** | **0.85x (18% slower)** |
-| jsonc-parser + JSON.parse | 51.18 | 0.10x (10x slower) |
+How fast is strict JSON validation? Compared to the typical approach of using `jsonc-parser` for duplicate key detection (which is the common alternative), this package is significantly faster while providing the same security guarantees.
+
+| Implementation | Avg ms/op (1MB) | vs Native | vs jsonc-parser | Validation scope |
+|---|---|---|---|---|
+| Native `JSON.parse` | 5.36 | 1.0x (baseline) | — | No validation |
+| **@pas7/nestjs-strict-json** | **6.30** | **0.85x (18% slower)** | **8.1x faster** | Duplicate keys, prototype pollution, depth limit, whitelist/blacklist |
+| `jsonc-parser` + `JSON.parse` | 51.18 | 0.10x (10x slower) | 1.0x (baseline) | Duplicate keys only |
+
+In other words: **with this package you get more security checks (prototype pollution, depth limit, key filtering) and still parse 8x faster than the minimal alternative that only checks duplicates.**
 
 Reproduce:
 

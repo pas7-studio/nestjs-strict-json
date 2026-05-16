@@ -86,4 +86,27 @@ describe("Express E2E", () => {
       code: "STRICT_JSON_INVALID_JSON",
     });
   });
+
+  it("rejects prototype pollution with 400", async () => {
+    const res = await fetch(url + "/test", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: '{"user":"John","__proto__":{"isAdmin":true}}',
+    });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({
+      code: "STRICT_JSON_PROTOTYPE_POLLUTION",
+    });
+  });
+
+  it("accepts JSON patch content type", async () => {
+    const res = await fetch(url + "/test", {
+      method: "POST",
+      headers: { "content-type": "application/json-patch+json" },
+      body: JSON.stringify([{ op: "add", path: "/a", value: 1 }]),
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.received).toEqual([{ op: "add", path: "/a", value: 1 }]);
+  });
 });

@@ -94,4 +94,28 @@ describe("Fastify E2E", () => {
       code: "STRICT_JSON_BODY_TOO_LARGE",
     });
   });
+
+  it("rejects prototype pollution with 400", async () => {
+    const res = await fetch(url + "/test", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: '{"user":"John","__proto__":{"isAdmin":true}}',
+    });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({
+      code: "STRICT_JSON_PROTOTYPE_POLLUTION",
+    });
+  });
+
+  it("rejects nested prototype pollution with 400", async () => {
+    const res = await fetch(url + "/test", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: '{"data":{"nested":{"__proto__":{"polluted":true}}}}',
+    });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({
+      code: "STRICT_JSON_PROTOTYPE_POLLUTION",
+    });
+  });
 });
