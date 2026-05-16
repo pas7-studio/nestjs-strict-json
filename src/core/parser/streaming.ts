@@ -18,16 +18,15 @@ const PP_MSG = 'Prototype pollution detected';
  */
 export function shouldUseStreamingForPayload(
   input: string | Buffer,
-  isStringInput: boolean,
   options?: StrictJsonOptions
 ): boolean {
   if (options?.enableStreaming === false) {
     return false;
   }
 
-  const threshold = options?.streamingThreshold ?? 100 * 1024; // 100KB default
+  const threshold = options?.streamingThreshold ?? 100 * 1024;
   
-  const byteLength = isStringInput ? Buffer.byteLength(input as string, "utf8") : (input as Buffer).byteLength;
+  const byteLength = typeof input === "string" ? Buffer.byteLength(input, "utf8") : input.byteLength;
   if (byteLength >= threshold) {
     return true;
   }

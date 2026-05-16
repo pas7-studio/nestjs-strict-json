@@ -65,7 +65,7 @@ class JsonParser {
   }
 
   private parseSync(input: string | Buffer, jsonStr: string, isStringInput: boolean, cacheKey: string | null): unknown {
-    if (shouldUseStreamingForPayload(input, isStringInput, this.options)) {
+    if (shouldUseStreamingForPayload(input, this.options)) {
       return this.fullParse(jsonStr, cacheKey, (h, e) => this.invokeHandlerSync(h, e));
     }
 
@@ -83,7 +83,7 @@ class JsonParser {
   }
 
   private async parseAsync(input: string | Buffer, jsonStr: string, isStringInput: boolean, cacheKey: string | null): Promise<unknown> {
-    if (shouldUseStreamingForPayload(input, isStringInput, this.options)) {
+    if (shouldUseStreamingForPayload(input, this.options)) {
       const buf = isStringInput ? Buffer.from(input as string, "utf8") : input as Buffer;
       const result = await parseLargePayload(buf, this.options);
       this.cacheResult(cacheKey, result);

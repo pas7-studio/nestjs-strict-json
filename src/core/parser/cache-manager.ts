@@ -2,7 +2,6 @@ import type { StrictJsonOptions } from "../types.js";
 import type { ICache } from "../cache/index.js";
 import { createCache } from "../cache/cache-factory.js";
 import { LRUCache } from "../cache/lru-cache.js";
-import { createHash } from "node:crypto";
 
 // Global cache instance using ICache interface
 let parseCache: ICache<string, unknown> = createCache();
@@ -169,9 +168,17 @@ export function resetCacheManager(): void {
  */
 const OPTIONS_CACHE = new WeakMap<StrictJsonOptions, string>();
 
+function hashStr(str: string): string {
+  let hash = 5381;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) + hash) + str.charCodeAt(i);
+  }
+  return (hash >>> 0).toString(36);
+}
+
 export function buildCacheKey(jsonStr: string, options?: StrictJsonOptions): string {
   if (!options) {
-    return createHash('md5').update(jsonStr).digest('hex');
+    return hashStr(jsonStr);
   }
 
   let optionsStr = OPTIONS_CACHE.get(options);
@@ -202,12 +209,7 @@ export function buildCacheKey(jsonStr: string, options?: StrictJsonOptions): str
     OPTIONS_CACHE.set(options, optionsStr);
   }
 
-  const hash = createHash('md5')
-    .update(jsonStr)
-    .update(optionsStr)
-    .digest('hex');
-  
-  return hash;
+  return hashStr(jsonStr) + '_' + hashStr(optionsStr);
 }
 
 // Export cache instance getter for internal use

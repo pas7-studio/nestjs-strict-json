@@ -84,9 +84,12 @@ function extractTraversalConfig(options?: StrictJsonOptions): TraversalConfig {
   const enablePrototypeProtection = options?.enablePrototypePollutionProtection !== false;
   const shouldCheckPrototype = enablePrototypeProtection && !(lazyMode && lazyModeSkipPrototype);
 
-  const dangerousKeysSet = shouldCheckPrototype
-    ? options?.dangerousKeys ? new Set(options.dangerousKeys) : DEFAULT_DANGEROUS_KEYS_SET
-    : EMPTY_SET;
+  let dangerousKeysSet = EMPTY_SET;
+  if (shouldCheckPrototype) {
+    dangerousKeysSet = options?.dangerousKeys
+      ? new Set(options.dangerousKeys)
+      : DEFAULT_DANGEROUS_KEYS_SET;
+  }
 
   const hasWhitelistOrBlacklist = options?.whitelist !== undefined || options?.blacklist !== undefined;
   const shouldCheckWhitelist = hasWhitelistOrBlacklist && !(lazyMode && lazyModeSkipWhitelist);
@@ -200,7 +203,7 @@ export const findDuplicateKeysInJson = (
   // This will throw PrototypePollutionError, DepthLimitError, or InvalidJsonError
   // if detected during traversal
   try {
-    return findDuplicateInNode(root, "$", options) as Duplicate;
+    return findDuplicateInNode(root, "$", options);
   } catch (e) {
     if (
       e instanceof PrototypePollutionError ||
