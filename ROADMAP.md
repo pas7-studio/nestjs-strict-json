@@ -7,8 +7,8 @@ This document describes the development strategy for `@pas7/nestjs-strict-json` 
 
 ### Current State
 
-- **Version**: v1.0.x (stable)
-- **Test coverage**: Comprehensive unit and e2e tests (551 passing)
+- **Version**: v1.1.x (stable)
+- **Test coverage**: Comprehensive unit and e2e tests (569 passing)
 - **Supported platforms**: NestJS 10+, Express 4+/5+, Fastify 4+, Node.js 20+
 - **Dependencies**: Minimal (only `jsonc-parser` for production)
 - **Stability**: Production-ready for use with NestJS and Fastify

@@ -20,7 +20,7 @@ If you need secure JSON parsing in Node.js APIs, this package is built for that 
 [![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=pas7-studio_nestjs-strict-json&metric=reliability_rating&style=flat-square)](https://sonarcloud.io/summary/new_code?id=pas7-studio_nestjs-strict-json)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=pas7-studio_nestjs-strict-json&metric=coverage&style=flat-square)](https://sonarcloud.io/summary/new_code?id=pas7-studio_nestjs-strict-json)
 [![License](https://img.shields.io/github/license/pas7-studio/nestjs-strict-json?style=flat-square)](https://github.com/pas7-studio/nestjs-strict-json/blob/main/LICENSE)
-[![Tests](https://img.shields.io/badge/tests-551%20passing-brightgreen.svg)](https://github.com/pas7-studio/nestjs-strict-json/actions/workflows/ci.yml)
+[![Tests](https://img.shields.io/badge/tests-569%20passing-brightgreen.svg)](https://github.com/pas7-studio/nestjs-strict-json/actions/workflows/ci.yml)
 [![Performance](https://img.shields.io/badge/performance-3.1x%20vs%20jsonc--parser-blue.svg)](performance/reports/comparison-latest.md)
 
 ## Why teams use this
