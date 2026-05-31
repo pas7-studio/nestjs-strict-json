@@ -79,23 +79,23 @@
     ]
   },
   "devDependencies": {
-    "@nestjs/common": "^11.1.19",
-    "@nestjs/core": "^11.1.19",
-    "@nestjs/platform-express": "^11.1.19",
-    "@nestjs/platform-fastify": "^11.1.19",
-    "@nestjs/testing": "11.1.19",
-    "@types/node": "^25.6.0",
-    "@typescript-eslint/eslint-plugin": "^8.59.1",
-    "@typescript-eslint/parser": "^8.59.1",
-    "@vitest/coverage-v8": "4.1.5",
-    "eslint": "^10.3.0",
+    "@nestjs/common": "^11.1.24",
+    "@nestjs/core": "^11.1.24",
+    "@nestjs/platform-express": "^11.1.24",
+    "@nestjs/platform-fastify": "^11.1.24",
+    "@nestjs/testing": "11.1.24",
+    "@types/node": "^25.9.1",
+    "@typescript-eslint/eslint-plugin": "^8.60.0",
+    "@typescript-eslint/parser": "^8.60.0",
+    "@vitest/coverage-v8": "4.1.7",
+    "eslint": "^10.4.1",
     "express": "^5.2.1",
     "fastify": "^5.8.5",
     "reflect-metadata": "0.2.2",
     "tsup": "^8.5.1",
     "typescript": "^6.0.3",
-    "vite": "8.0.10",
-    "vitest": "^4.1.5"
+    "vite": "8.0.14",
+    "vitest": "^4.1.7"
   },
   "engines": {
     "node": ">=20.0.0"
