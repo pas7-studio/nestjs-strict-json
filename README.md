@@ -277,6 +277,19 @@ How fast is strict JSON validation? Compared to the typical approach of using `j
 
 In other words: **with this package you get more security checks (prototype pollution, depth limit, key filtering) and still parse 8x faster than the minimal alternative that only checks duplicates.**
 
+### Throughput benchmarks (Node.js 24, v1.1.5)
+
+| Scenario | Payload | Ops/sec | μs/op | Note |
+|----------|---------|--------:|------:|------|
+| Cache HIT (repeated body) | 1 KB | 2,000,000 | 0.5 | Hot path, hash cache |
+| Cache HIT (repeated body) | 50 KB | 125,000 | 8.0 | Hot path, hash cache |
+| Cache MISS (unique body) | 1 KB | 27,000 | 37 | Cold path, AST + validation |
+| Cache MISS (unique body) | 50 KB | 1,110 | 900 | Cold path, AST + validation |
+| Fast path (prototype only) | 1 KB | 154,000 | 6.5 | JSON.parse + pollution check |
+| Fast path (prototype only) | 50 KB | 4,350 | 230 | JSON.parse + pollution check |
+
+**v1.1.5 improvements over v1.1.4:** cache-hit throughput improved **300–712%** via hash caching; cold path **up to 32% faster** via direct AST-to-value conversion.
+
 Reproduce:
 
 ```bash
