@@ -168,6 +168,9 @@ export function resetCacheManager(): void {
  */
 const OPTIONS_CACHE = new WeakMap<StrictJsonOptions, string>();
 
+const HASH_CACHE = new Map<string, string>();
+const MAX_HASH_CACHE_SIZE = 500;
+
 function hashStr(str: string): string {
   let hash = 5381;
   for (let i = 0; i < str.length; i++) {
@@ -176,9 +179,29 @@ function hashStr(str: string): string {
   return (hash >>> 0).toString(36);
 }
 
+function getOrComputeHash(str: string): string {
+  const cached = HASH_CACHE.get(str);
+  if (cached) return cached;
+  const hash = hashStr(str);
+  if (HASH_CACHE.size >= MAX_HASH_CACHE_SIZE) {
+    const first = HASH_CACHE.keys().next().value;
+    if (first !== undefined) HASH_CACHE.delete(first);
+  }
+  HASH_CACHE.set(str, hash);
+  return hash;
+}
+
+export function clearHashCache(): void {
+  HASH_CACHE.clear();
+}
+
+export function getHashCacheSize(): number {
+  return HASH_CACHE.size;
+}
+
 export function buildCacheKey(jsonStr: string, options?: StrictJsonOptions): string {
   if (!options) {
-    return hashStr(jsonStr);
+    return getOrComputeHash(jsonStr);
   }
 
   let optionsStr = OPTIONS_CACHE.get(options);
@@ -209,7 +232,7 @@ export function buildCacheKey(jsonStr: string, options?: StrictJsonOptions): str
     OPTIONS_CACHE.set(options, optionsStr);
   }
 
-  return hashStr(jsonStr) + '_' + hashStr(optionsStr);
+  return getOrComputeHash(jsonStr) + '_' + getOrComputeHash(optionsStr);
 }
 
 // Export cache instance getter for internal use

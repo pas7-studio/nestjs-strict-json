@@ -3,7 +3,7 @@ import {
   InvalidJsonError,
   PrototypePollutionError,
 } from "../errors.js";
-import { parseTree, type Node, type ParseError } from "jsonc-parser";
+import { parseTree, getNodeValue, type Node, type ParseError } from "jsonc-parser";
 import type { StrictJsonOptions } from "../types.js";
 import { isKeyAllowed } from "../validation/index.js";
 
@@ -12,6 +12,20 @@ type DangerousKey = { key: string; path: string } | null;
 
 const DEFAULT_DANGEROUS_KEYS_SET = new Set(['__proto__', 'constructor', 'prototype']);
 const EMPTY_SET = new Set<string>();
+
+const SET_POOL: Set<string>[] = [];
+const MAX_POOL_SIZE = 64;
+
+function acquireSet(): Set<string> {
+  return SET_POOL.length > 0 ? SET_POOL.pop()! : new Set<string>();
+}
+
+function releaseSet(s: Set<string>): void {
+  s.clear();
+  if (SET_POOL.length < MAX_POOL_SIZE) {
+    SET_POOL.push(s);
+  }
+}
 
 // Optimized iterative version of findDuplicateInNode with lazy mode support
 interface StackFrame {
@@ -44,21 +58,26 @@ export const findDuplicateInNode = (
   const config = extractTraversalConfig(options);
 
   const stack: StackFrame[] = [
-    { node, path, depth, seenKeys: new Set<string>() }
+    { node, path, depth, seenKeys: acquireSet() }
   ];
 
   while (stack.length > 0) {
     const frame = stack.pop()!;
     
     if (frame.depth > config.effectiveDepthLimit) {
+      releaseSet(frame.seenKeys);
       throw new DepthLimitError(frame.depth, config.effectiveDepthLimit);
     }
 
     if (frame.node.type === "object") {
       const duplicate = processObjectNode(stack, frame, config, options);
+      releaseSet(frame.seenKeys);
       if (duplicate) return duplicate;
     } else if (frame.node.type === "array") {
+      releaseSet(frame.seenKeys);
       processArrayNode(stack, frame);
+    } else {
+      releaseSet(frame.seenKeys);
     }
   }
 
@@ -134,7 +153,7 @@ function processObjectNode(
       node: valueNode,
       path: keyPath,
       depth: currentDepth + 1,
-      seenKeys: new Set<string>(),
+      seenKeys: acquireSet(),
     });
   }
 
@@ -153,7 +172,7 @@ function processArrayNode(stack: StackFrame[], frame: StackFrame): void {
       node: child,
       path: `${currentPath}[${i}]`,
       depth: currentDepth + 1,
-      seenKeys: new Set<string>(),
+      seenKeys: acquireSet(),
     });
   }
 }
@@ -215,6 +234,29 @@ export const findDuplicateKeysInJson = (
     throw e;
   }
 };
+
+export function checkAndGetValue(
+  jsonStr: string,
+  options?: StrictJsonOptions,
+): { value: unknown; duplicate: Duplicate } {
+  const errors: ParseError[] = [];
+  const root = parseTree(jsonStr, errors, {
+    allowTrailingComma: false,
+    disallowComments: true,
+    allowEmptyContent: false,
+  });
+
+  if (!root || errors.length > 0) {
+    throw new InvalidJsonError("Invalid JSON");
+  }
+
+  const duplicate = findDuplicateInNode(root, "$", options);
+  if (duplicate) {
+    return { value: undefined, duplicate };
+  }
+
+  return { value: getNodeValue(root), duplicate: null };
+}
 
 // Export type for use in other modules
 export type { Duplicate, DangerousKey };

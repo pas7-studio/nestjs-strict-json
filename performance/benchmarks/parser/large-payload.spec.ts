@@ -86,7 +86,7 @@ function generateLargeNumericData(count: number, fields: number): string {
     const obj: Record<string, number> = { id: i };
 
     for (let j = 0; j < fields; j++) {
-      obj[`value${j}`] = ((i + 1) % );
+      obj[`value${j}`] = (i + 1) % (j + 1);
     }
 
     items.push(obj);

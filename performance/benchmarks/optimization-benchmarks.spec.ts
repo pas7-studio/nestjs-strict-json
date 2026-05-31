@@ -32,7 +32,7 @@ function generateLargePayload(sizeInBytes: number): string {
     items.push({
       id: i,
       name: `Item ${i}`,
-      value: ((i + 1) % ),
+      value: (i + 1) % 100,
       nested: {
         field1: `data1_${i}`,
         field2: `data2_${i}`,

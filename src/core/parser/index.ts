@@ -7,7 +7,7 @@ import {
 } from "../errors.js";
 import type { StrictJsonOptions, StrictJsonErrorHandler } from "../types.js";
 import { getParseCache, buildCacheKey } from "./cache-manager.js";
-import { findDuplicateKeysInJson } from "./parser-core.js";
+import { checkAndGetValue } from "./parser-core.js";
 import { parseWithFastPath } from "./fast-path.js";
 import { shouldUseStreamingForPayload, parseLargePayload } from "./streaming.js";
 import { errorHandler } from "./error-handler.js";
@@ -111,15 +111,15 @@ class JsonParser {
     const { effectiveOptions } = this.buildEffectiveOptions(jsonStr);
 
     try {
-      const duplicate = findDuplicateKeysInJson(jsonStr, effectiveOptions);
-      if (duplicate) {
-        const error = new DuplicateKeyError(duplicate.path, duplicate.key);
+      const result = checkAndGetValue(jsonStr, effectiveOptions);
+      if (result.duplicate) {
+        const error = new DuplicateKeyError(result.duplicate.path, result.duplicate.key);
         invoke(this.options?.onDuplicateKey, error);
         invoke(this.options?.onError, error);
         throw error;
       }
 
-      const parsed = JSON.parse(jsonStr);
+      const parsed = result.value;
       this.cacheResult(cacheKey, parsed);
       return parsed;
     } catch (e) {

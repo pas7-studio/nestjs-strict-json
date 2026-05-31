@@ -4,6 +4,11 @@ import type { StrictJsonOptions } from "../types.js";
 const DEFAULT_DANGEROUS_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 const OBJECT_TYPE = 'object';
 
+interface PCFrame {
+  obj: Record<string, unknown>;
+  path: string;
+}
+
 /**
  * Fast path for simple JSON validation when enableFastPath is true.
  * This function performs a quick JSON.parse and only checks for prototype pollution,
@@ -28,16 +33,23 @@ export function parseWithFastPath(jsonStr: string, options?: StrictJsonOptions):
   return parsed;
 }
 
-function checkPrototypePollution(obj: unknown, path: string, dangerousKeys: Set<string>): void {
-  if (obj && typeof obj === OBJECT_TYPE) {
-    const record = obj as Record<string, unknown>;
-    for (const key of Object.keys(record)) {
+function checkPrototypePollution(root: unknown, _path: string, dangerousKeys: Set<string>): void {
+  if (!root || typeof root !== OBJECT_TYPE) return;
+
+  const stack: PCFrame[] = [{ obj: root as Record<string, unknown>, path: '$' }];
+
+  while (stack.length > 0) {
+    const frame = stack.pop()!;
+    const keys = Object.keys(frame.obj);
+
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i];
       if (dangerousKeys.has(key)) {
-        throw new PrototypePollutionError(key, path);
+        throw new PrototypePollutionError(key, frame.path);
       }
-      const val = record[key];
+      const val = frame.obj[key];
       if (typeof val === OBJECT_TYPE && val !== null) {
-        checkPrototypePollution(val, `${path}.${key}`, dangerousKeys);
+        stack.push({ obj: val as Record<string, unknown>, path: `${frame.path}.${key}` });
       }
     }
   }

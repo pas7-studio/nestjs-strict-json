@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.5] - 2026-05-31
+
+### Performance
+
+- **Hash cache for `buildCacheKey`** — new `Map<string,string>` (max 500 entries) caches DJB2 hash results, avoiding O(n) re-hashing of repeated payloads. HOT (cache-hit) path up to **712% faster** for 50KB payloads.
+- **`getNodeValue` replaces second `JSON.parse`** — after AST-based duplicate detection, the JavaScript value is extracted directly from the AST via `getNodeValue()` instead of re-parsing the JSON string. COLD path **up to 32% faster** for large payloads.
+- **Iterative `checkPrototypePollution`** — converted from recursive to stack-based traversal in fast-path, preventing stack overflow on deeply nested objects without performance regression.
+- **Set pool for `seenKeys`** — reused `Set` objects via `acquireSet()`/`releaseSet()` pool to reduce GC pressure during AST traversal.
+
+### Fixed
+
+- **Syntax errors in benchmark generators** — fixed missing operands after `%` and `*` operators in `generators.ts`, `large-payload.spec.ts`, `memory-usage.spec.ts`, `optimization-benchmarks.spec.ts`, and `test-optimizations.ts`.
+
+### Added
+
+- `clearHashCache()` / `getHashCacheSize()` — public API for managing the new hash cache.
+
+### Benchmarks (v1.1.4 → v1.1.5)
+
+| Scenario | Before (ops/sec) | After (ops/sec) | Improvement |
+|----------|-----------------|----------------|-------------|
+| HOT same 50KB (cache hit) | 15,385 | 125,000 | **712%** |
+| HOT same 1KB (cache hit) | 500,000 | 2,000,000 | **300%** |
+| NO CACHE unique 50KB | 1,342 | 1,527 | **14%** |
+| COLD unique 50KB | 1,070 | 1,111 | **4%** |
+| COLD unique 1KB | 26,667 | 27,027 | **1%** |
+
+[1.1.5]: https://github.com/pas7-studio/nestjs-strict-json/releases/tag/v1.1.5
+
 ## [1.1.4] - 2026-05-16
 
 ### Added

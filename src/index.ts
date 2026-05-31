@@ -6,6 +6,8 @@ export {
   shutdownCacheManager,
   resetCacheManager,
   isCleanupIntervalRunning,
+  clearHashCache,
+  getHashCacheSize,
 } from "./core/parser.js";
 export {
   StreamingJsonParser,

@@ -372,9 +372,9 @@ describe('Memory Usage Benchmarks', () => {
     const numericJson = toJsonString({
       items: Array.from({ length: 1000 }, (_, i) => ({
         id: i,
-        value1: ((i + 1) % ),
-        value2: ((i + 1) % ),
-        value3: ((i + 1) % )
+        value1: (i + 1) % 7,
+        value2: (i + 1) % 13,
+        value3: (i + 1) % 31
       }))
     });
 
